@@ -15,7 +15,7 @@ pub struct Cell {
     pub is_bomb: bool,
     pub number_of_adjusted_bombs: u8,
 
-    pub is_flaged: bool,
+    pub is_flagged: bool,
     pub is_discovered: bool,
 }
 
@@ -23,7 +23,7 @@ pub fn init_blank_cell() -> Cell {
     Cell {
         is_bomb: false,
         number_of_adjusted_bombs: 0,
-        is_flaged: false,
+        is_flagged: false,
         is_discovered: false,
     }
 }
@@ -41,7 +41,7 @@ impl Cell {
                 }
             }
         } else {
-            if self.is_flaged {
+            if self.is_flagged {
                 return theme.flag.clone();
             } else {
                 return theme.unknown.clone();
@@ -119,13 +119,13 @@ impl Board {
             } else {
                 // discover cell
                 if left_key {
-                    if self.cells[row][column].is_flaged {
-                        self.cells[row][column].is_flaged = false;
+                    if self.cells[row][column].is_flagged {
+                        self.cells[row][column].is_flagged = false;
                     } else {
                         self.discover_cell((row, column));
                     }
                 } else {
-                    self.cells[row][column].is_flaged = true;
+                    self.cells[row][column].is_flagged = true;
                 }
             }
         }
@@ -203,8 +203,8 @@ impl Board {
                 if self.cells[row][column].is_bomb && self.cells[row][column].is_discovered {
                     return Err(Error::new(ErrorKind::BrokenPipe, "Boom!!"));
                 }
-                if self.cells[row][column].is_flaged {
-                    number_of_flags += 1
+                if self.cells[row][column].is_flagged {
+                    number_of_flags += 1;
                 }
             }
         }
@@ -253,7 +253,7 @@ impl Board {
     }
 
     fn discover_cell(&mut self, (row, column): (usize, usize)) {
-        if !self.cells[row][column].is_discovered && !self.cells[row][column].is_flaged {
+        if !self.cells[row][column].is_discovered && !self.cells[row][column].is_flagged {
             self.cells[row][column].is_discovered = true;
             if self.cells[row][column].number_of_adjusted_bombs == 0 {
                 for index in self.get_adjusted_indices((row, column)) {
@@ -266,30 +266,30 @@ impl Board {
     fn discover_or_flag_adjusted_cells(&mut self, (row, column): (usize, usize)) {
         let adjusted_indices = &self.get_adjusted_indices((row, column));
         let mut number_of_unknown_adjusted_cells = 0;
-        let mut number_of_flaged_adjusted_cells = 0;
+        let mut number_of_flagged_adjusted_cells = 0;
         for index in adjusted_indices {
             if !self.cells[index.0][index.1].is_discovered
-                && !self.cells[index.0][index.1].is_flaged
+                && !self.cells[index.0][index.1].is_flagged
             {
                 number_of_unknown_adjusted_cells += 1;
             }
-            if self.cells[index.0][index.1].is_flaged {
-                number_of_flaged_adjusted_cells += 1;
+            if self.cells[index.0][index.1].is_flagged {
+                number_of_flagged_adjusted_cells += 1;
             }
         }
 
-        if self.cells[row][column].number_of_adjusted_bombs == number_of_flaged_adjusted_cells {
+        if self.cells[row][column].number_of_adjusted_bombs == number_of_flagged_adjusted_cells {
             for index in adjusted_indices {
                 self.discover_cell(*index);
             }
-        } else if self.cells[row][column].number_of_adjusted_bombs - number_of_flaged_adjusted_cells
+        } else if self.cells[row][column].number_of_adjusted_bombs - number_of_flagged_adjusted_cells
             == number_of_unknown_adjusted_cells
         {
             for index in adjusted_indices {
                 if !self.cells[index.0][index.1].is_discovered
-                    && !self.cells[index.0][index.1].is_flaged
+                    && !self.cells[index.0][index.1].is_flagged
                 {
-                    self.cells[index.0][index.1].is_flaged = true;
+                    self.cells[index.0][index.1].is_flagged = true;
                 }
             }
         }
