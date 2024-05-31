@@ -27,7 +27,7 @@ pub fn init_blank_cell() -> Cell {
 }
 
 impl Cell {
-    pub fn content_to_show<'a>(&'a self, theme: &'a Theme) -> String {
+    pub fn content_to_show(&self, theme: &Theme) -> String {
         if self.is_discovered {
             if self.is_bomb {
                 return theme.bomb.clone();
@@ -48,6 +48,8 @@ pub struct Board {
     pub theme: Theme,
     pub size: (usize, usize),
     pub cells: Vec<Vec<Cell>>,
+    pub number_of_bombs: usize,
+    pub number_of_flags: usize,
 }
 
 pub fn init_random_game(size: (usize, usize), theme: Theme) -> Board {
@@ -55,18 +57,59 @@ pub fn init_random_game(size: (usize, usize), theme: Theme) -> Board {
         theme,
         size,
         cells: vec![vec![init_blank_cell(); size.1]; size.0],
+        number_of_bombs: 0,
+        number_of_flags: 0,
     };
 
     game_board
 }
 
 impl Board {
-    pub fn mouse_hover(&self, _row: u16, _column: u16) {
+    pub fn mouse_hover(&mut self, _row: usize, _column: usize) {
         // println!("mouse_hover: {} {} \r", row, column)
     }
 
-    pub fn mouse_down(&self, _row: u16, _column: u16) {
-        // println!("mouse_down: {} {} \r", row, column)
+    pub fn mouse_down(&mut self, mouse_row: usize, mouse_column: usize) {
+        let (is_valid, row, column) = self.convet_mouse_to_index(mouse_row, mouse_column);
+        if is_valid {
+            if !self.cells[row][column].is_flaged {
+                self.cells[row][column].is_flaged = false;
+            } else {
+                self.cells[row][column].is_discovered = true;
+            }
+        }
+    }
+
+    fn convet_mouse_to_index(&self, mouse_row: usize, mouse_column: usize) -> (bool, usize, usize) {
+        let row: usize;
+        let column: usize;
+        let mut is_valid: bool = true;
+
+        if mouse_row % 2 == 0 {
+            is_valid = false;
+        }
+        row = ((mouse_row + 1) / 2) - 1;
+
+        if self.theme.cell_horizontal_padding_enabled {
+            if mouse_column % 4 == 0 {
+                is_valid = false;
+            }
+            column = ((mouse_column + (4 - (mouse_column % 4))) / 4) - 1;
+        } else {
+            if mouse_column % 2 == 0 {
+                is_valid = false;
+            }
+            column = ((mouse_column + 1) / 2) - 1;
+        }
+
+        if row >= self.size.0 {
+            is_valid = false;
+        }
+        if column >= self.size.1 {
+            is_valid = false;
+        }
+
+        (is_valid, row, column)
     }
 
     pub fn draw(&self, mut stdout: &Stdout) -> Result<()> {
@@ -133,6 +176,11 @@ impl Board {
         }
         line3 += &self.theme.corner_bottom_right;
         println!("{}\r", line3);
+
+        println!(
+            "remaining flags: {}\r",
+            self.number_of_bombs - self.number_of_flags
+        );
 
         Ok(())
     }

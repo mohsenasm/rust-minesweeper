@@ -7,8 +7,8 @@ use crossterm::{
     execute, queue,
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use theme::default_theme;
 use std::io::{stdout, Result, Stdout};
+use theme::default_theme;
 
 mod board;
 use board::{init_random_game, Board};
@@ -34,7 +34,7 @@ const ESC_KEY: KeyEvent = KeyEvent {
     state: KeyEventState::NONE,
 };
 
-fn event_loop(game_board: Board, stdout: &Stdout) -> Result<()> {
+fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
     // first draw
     if let Err(e) = game_board.draw(&stdout) {
         return Err(e);
@@ -44,11 +44,14 @@ fn event_loop(game_board: Board, stdout: &Stdout) -> Result<()> {
         let event = read()?;
 
         if let Event::Mouse(mouse_event) = event {
+            let row = mouse_event.row as usize; // TODO: usize::try_from(mouse_event.row);
+            let column = mouse_event.column as usize; // TODO: usize::try_from(mouse_event.column);
+
             if mouse_event.kind == MouseEventKind::Moved {
-                game_board.mouse_hover(mouse_event.row, mouse_event.column);
+                game_board.mouse_hover(row, column);
             }
             if mouse_event.kind == MouseEventKind::Down(MouseButton::Left) {
-                game_board.mouse_down(mouse_event.row, mouse_event.column);
+                game_board.mouse_down(row, column);
             }
         }
 
