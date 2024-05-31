@@ -82,6 +82,7 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
     }
 
     // fill numbers
+    let mut non_bomb_cells: Vec<(u8, (usize, usize))> = Vec::new();
     for row in 0..size.0 {
         for column in 0..size.1 {
             for index in game_board.get_adjusted_indices((row, column)) {
@@ -89,28 +90,36 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
                     game_board.cells[row][column].number_of_adjusted_bombs += 1;
                 }
             }
-        }
-    }
-
-    // make a starting point
-    // TODO: sort and get a number_of_adjusted_bombs==0
-    if game_board.number_of_bombs < size.0 * size.1 {
-        loop {
-            let x = random.gen_range(0..size.0);
-            let y = random.gen_range(0..size.1);
-            if game_board.cells[x][y].is_bomb == false {
-                game_board.discover_cell((x, y));
-                break;
+            if !game_board.cells[row][column].is_bomb {
+                non_bomb_cells.push((
+                    game_board.cells[row][column].number_of_adjusted_bombs,
+                    (row, column),
+                ));
             }
         }
     }
 
+    // make a starting point
+    if non_bomb_cells.len() > 0 {
+        non_bomb_cells.sort_by_key(|x: &(u8, (usize, usize))| x.0);
+        let min_number_of_adjusted_bombs = non_bomb_cells[0].0;
+        let mut last_index: usize = 0;
+        for (index, cell) in non_bomb_cells.iter().enumerate() {
+            if cell.0 == min_number_of_adjusted_bombs {
+                last_index = index
+            } else {
+                break;
+            }
+        }
+        let i = random.gen_range(0..last_index);
+        game_board.discover_cell(non_bomb_cells[i].1);
+    }
     game_board
 }
 
 impl Board {
     pub fn mouse_hover(&mut self, _row: usize, _column: usize) {
-        // println!("mouse_hover: {} {} \r", row, column)
+        // TODO: change color of the pointing cell
     }
 
     pub fn mouse_down(&mut self, mouse_row: usize, mouse_column: usize, left_key: bool) {
