@@ -7,10 +7,13 @@ use crossterm::{
     execute, queue,
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use std::io;
+use theme::default_theme;
+use std::io::{stdout, Result, Stdout};
 
 mod board;
-use board::Board;
+use board::{init_random_game, Board};
+
+mod theme;
 
 const CTRL_C_KEY: KeyEvent = KeyEvent {
     code: KeyCode::Char('c'),
@@ -31,7 +34,12 @@ const ESC_KEY: KeyEvent = KeyEvent {
     state: KeyEventState::NONE,
 };
 
-fn event_loop(game_board: Board) -> io::Result<()> {
+fn event_loop(game_board: Board, stdout: &Stdout) -> Result<()> {
+    // first draw
+    if let Err(e) = game_board.draw(&stdout) {
+        return Err(e);
+    }
+
     loop {
         let event = read()?;
 
@@ -50,14 +58,18 @@ fn event_loop(game_board: Board) -> io::Result<()> {
                 break;
             }
         }
+
+        if let Err(e) = game_board.draw(&stdout) {
+            return Err(e);
+        }
     }
     Ok(())
 }
 
-fn main() -> io::Result<()> {
+fn main() -> Result<()> {
     // terminal setup
     enable_raw_mode()?;
-    let mut stdout = io::stdout();
+    let mut stdout = stdout();
     let supports_keyboard_enhancement = matches!(
         crossterm::terminal::supports_keyboard_enhancement(),
         Ok(true)
@@ -73,15 +85,14 @@ fn main() -> io::Result<()> {
             )
         )?;
     }
-    execute!(stdout, EnableMouseCapture,)?;
+    execute!(stdout, EnableMouseCapture)?;
 
     // board setup
-    let game_board = Board { size: (80, 80) };
-    game_board.init_random_game();
+    let game_board = init_random_game((5, 10), default_theme());
 
     // event_loop
-    if let Err(e) = event_loop(game_board) {
-        println!("Error: {:?}\r", e);
+    if let Err(e) = event_loop(game_board, &stdout) {
+        println!("{:?}\r", e);
     }
 
     // terminal exit
