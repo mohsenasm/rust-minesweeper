@@ -99,7 +99,7 @@ fn main() -> Result<()> {
 
     // event_loop
     if let Err(e) = event_loop(game_board, &stdout) {
-        println!("{:?}\r", e);
+        println!("{}\r", e.to_string());
     }
 
     // terminal exit

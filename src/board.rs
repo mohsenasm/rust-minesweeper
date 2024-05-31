@@ -1,4 +1,4 @@
-use std::io::{Result, Stdout};
+use std::io::{Error, ErrorKind, Result, Stdout};
 
 use crossterm::{
     cursor::MoveTo,
@@ -55,7 +55,6 @@ pub struct Board {
     pub size: (usize, usize),
     pub cells: Vec<Vec<Cell>>,
     pub number_of_bombs: usize,
-    pub number_of_flags: usize,
 }
 
 pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme) -> Board {
@@ -64,7 +63,6 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
         size,
         cells: vec![vec![init_blank_cell(); size.1]; size.0],
         number_of_bombs: 0,
-        number_of_flags: 0,
     };
 
     // generate bombs
@@ -198,9 +196,22 @@ impl Board {
         line3 += &self.theme.corner_bottom_right;
         println!("{}\r", line3);
 
+        let mut number_of_flags = 0;
+
+        for row in 0..self.size.0 {
+            for column in 0..self.size.1 {
+                if self.cells[row][column].is_bomb && self.cells[row][column].is_discovered {
+                    return Err(Error::new(ErrorKind::BrokenPipe, "Boom!!"));
+                }
+                if self.cells[row][column].is_flaged {
+                    number_of_flags += 1
+                }
+            }
+        }
+
         println!(
             "remaining flags: {}\r",
-            self.number_of_bombs - self.number_of_flags
+            self.number_of_bombs - number_of_flags
         );
 
         Ok(())

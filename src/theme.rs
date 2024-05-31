@@ -1,3 +1,5 @@
+use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
+
 pub struct Theme {
     pub cell_horizontal_padding_enabled: bool,
     pub cell_horizontal_padding: String,
@@ -21,24 +23,28 @@ pub struct Theme {
 }
 
 pub fn default_theme() -> Theme {
+    let black_foreground = SetForegroundColor(Color::Black).to_string();
+    let grey_background = SetBackgroundColor(Color::DarkGrey).to_string();
+    let reset_color = ResetColor.to_string();
+
     Theme {
         cell_horizontal_padding_enabled: true,
         cell_horizontal_padding: ' '.to_string(),
 
-        line_horizontal: '─'.to_string(),
-        line_vertical: '│'.to_string(),
-        line_cross: '┼'.to_string(),
-        corner_top_left: '┌'.to_string(),
-        corner_top_right: '┐'.to_string(),
-        corner_bottom_left: '└'.to_string(),
-        corner_bottom_right: '┘'.to_string(),
-        edge_top: '┬'.to_string(),
-        edge_bottom: '┴'.to_string(),
-        edge_left: '├'.to_string(),
-        edge_right: '┤'.to_string(),
+        line_horizontal: format!("{}{}{}", black_foreground, '─'.to_string(), reset_color),
+        line_vertical: format!("{}{}{}", black_foreground, '│'.to_string(), reset_color),
+        line_cross: format!("{}{}{}", black_foreground, '┼'.to_string(), reset_color),
+        corner_top_left: format!("{}{}{}", black_foreground, '┌'.to_string(), reset_color),
+        corner_top_right: format!("{}{}{}", black_foreground, '┐'.to_string(), reset_color),
+        corner_bottom_left: format!("{}{}{}", black_foreground, '└'.to_string(), reset_color),
+        corner_bottom_right: format!("{}{}{}", black_foreground, '┘'.to_string(), reset_color),
+        edge_top: format!("{}{}{}", black_foreground, '┬'.to_string(), reset_color),
+        edge_bottom: format!("{}{}{}", black_foreground, '┴'.to_string(), reset_color),
+        edge_left: format!("{}{}{}", black_foreground, '├'.to_string(), reset_color),
+        edge_right: format!("{}{}{}", black_foreground, '┤'.to_string(), reset_color),
 
-        bomb: 'B'.to_string(),
-        flag: 'F'.to_string(),
+        bomb: format!("{}{}{}{}", black_foreground, grey_background, 'B'.to_string(), reset_color),
+        flag: format!("{}{}{}{}", black_foreground, grey_background, 'F'.to_string(), reset_color),
         empty: ' '.to_string(),
         unknown: '█'.to_string(),
     }
