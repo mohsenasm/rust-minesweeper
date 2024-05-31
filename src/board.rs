@@ -201,12 +201,25 @@ impl Board {
 
         println!("remaining flags: {}\r", self.remaining_flags);
 
+        let mut bombs_without_flag = 0;
+        let mut non_bomb_cells_undicovered = 0;
+
         for row in 0..self.size.0 {
             for column in 0..self.size.1 {
                 if self.cells[row][column].is_bomb && self.cells[row][column].is_discovered {
                     return Err(Error::new(ErrorKind::BrokenPipe, "Boom!!"));
                 }
+                if self.cells[row][column].is_bomb && !self.cells[row][column].is_flagged {
+                    bombs_without_flag += 1;
+                }
+                if !self.cells[row][column].is_bomb && !self.cells[row][column].is_discovered {
+                    non_bomb_cells_undicovered += 1;
+                }
             }
+        }
+
+        if bombs_without_flag == 0 || non_bomb_cells_undicovered == 0 {
+            return Err(Error::new(ErrorKind::BrokenPipe, "You Won :)"));
         }
 
         Ok(())
@@ -259,14 +272,18 @@ impl Board {
     }
 
     fn set_cell_flag(&mut self, (row, column): (usize, usize), flag: bool) {
-        if flag {
-            if self.remaining_flags > 0 {
+        if self.cells[row][column].is_flagged != flag { // need to change
+            if flag {
+                if self.remaining_flags > 0 {
+                    self.cells[row][column].is_flagged = flag;
+                    self.remaining_flags -= 1;
+                }
+            } else {
                 self.cells[row][column].is_flagged = flag;
-                self.remaining_flags -= 1;
+                self.remaining_flags += 1;
             }
         } else {
-            self.cells[row][column].is_flagged = flag;
-            self.remaining_flags += 1;
+            panic!("set_cell_flag: is_flagged == flag")
         }
     }
 
@@ -297,7 +314,7 @@ impl Board {
                 if !self.cells[index.0][index.1].is_discovered
                     && !self.cells[index.0][index.1].is_flagged
                 {
-                    self.set_cell_flag((row, column), true);
+                    self.set_cell_flag((index.0, index.1), true);
                 }
             }
         }
