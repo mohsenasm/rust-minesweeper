@@ -51,7 +51,11 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
                 game_board.mouse_hover(row, column);
             }
             if mouse_event.kind == MouseEventKind::Down(MouseButton::Left) {
-                game_board.mouse_down(row, column);
+                game_board.mouse_down(row, column, true);
+            } else if mouse_event.kind == MouseEventKind::Down(MouseButton::Right)
+                || mouse_event.kind == MouseEventKind::Down(MouseButton::Middle)
+            {
+                game_board.mouse_down(row, column, false);
             }
         }
 
@@ -91,7 +95,7 @@ fn main() -> Result<()> {
     execute!(stdout, EnableMouseCapture)?;
 
     // board setup
-    let game_board = init_random_game((5, 10), 0.3, default_theme());
+    let game_board = init_random_game((5, 10), 0.2, default_theme());
 
     // event_loop
     if let Err(e) = event_loop(game_board, &stdout) {

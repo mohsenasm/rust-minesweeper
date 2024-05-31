@@ -34,7 +34,11 @@ impl Cell {
             if self.is_bomb {
                 return theme.bomb.clone();
             } else {
-                return self.number_of_adjusted_bombs.to_string();
+                if self.number_of_adjusted_bombs == 0 {
+                    return theme.empty.clone();
+                } else {
+                    return self.number_of_adjusted_bombs.to_string();
+                }
             }
         } else {
             if self.is_flaged {
@@ -88,11 +92,12 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
     }
 
     // make a starting point
+    // TODO: sort and get a number_of_adjusted_bombs==0
     if game_board.number_of_bombs < size.0 * size.1 {
         loop {
             let x = random.gen_range(0..size.0);
             let y = random.gen_range(0..size.1);
-            if game_board.cells[x][y].number_of_adjusted_bombs == 0 {
+            if game_board.cells[x][y].is_bomb == false {
                 game_board.discover_cell((x, y));
                 break;
             }
@@ -107,13 +112,23 @@ impl Board {
         // println!("mouse_hover: {} {} \r", row, column)
     }
 
-    pub fn mouse_down(&mut self, mouse_row: usize, mouse_column: usize) {
+    pub fn mouse_down(&mut self, mouse_row: usize, mouse_column: usize, left_key: bool) {
         let index = self.convet_mouse_to_index(mouse_row, mouse_column);
         if let Some((row, column)) = index {
-            if self.cells[row][column].is_flaged {
-                self.cells[row][column].is_flaged = false;
+            if self.cells[row][column].is_discovered {
+                // fill flags for adjusted cells, if possible
+                self.discover_or_flag_adjusted_cells((row, column));
             } else {
-                self.discover_cell((row, column));
+                // discover cell
+                if left_key {
+                    if self.cells[row][column].is_flaged {
+                        self.cells[row][column].is_flaged = false;
+                    } else {
+                        self.discover_cell((row, column));
+                    }
+                } else {
+                    self.cells[row][column].is_flaged = true;
+                }
             }
         }
     }
@@ -232,6 +247,38 @@ impl Board {
             if self.cells[row][column].number_of_adjusted_bombs == 0 {
                 for index in self.get_adjusted_indices((row, column)) {
                     self.discover_cell(index)
+                }
+            }
+        }
+    }
+
+    fn discover_or_flag_adjusted_cells(&mut self, (row, column): (usize, usize)) {
+        let adjusted_indices = &self.get_adjusted_indices((row, column));
+        let mut number_of_unknown_adjusted_cells = 0;
+        let mut number_of_flaged_adjusted_cells = 0;
+        for index in adjusted_indices {
+            if !self.cells[index.0][index.1].is_discovered
+                && !self.cells[index.0][index.1].is_flaged
+            {
+                number_of_unknown_adjusted_cells += 1;
+            }
+            if self.cells[index.0][index.1].is_flaged {
+                number_of_flaged_adjusted_cells += 1;
+            }
+        }
+
+        if self.cells[row][column].number_of_adjusted_bombs == number_of_flaged_adjusted_cells {
+            for index in adjusted_indices {
+                self.discover_cell(*index);
+            }
+        } else if self.cells[row][column].number_of_adjusted_bombs - number_of_flaged_adjusted_cells
+            == number_of_unknown_adjusted_cells
+        {
+            for index in adjusted_indices {
+                if !self.cells[index.0][index.1].is_discovered
+                    && !self.cells[index.0][index.1].is_flaged
+                {
+                    self.cells[index.0][index.1].is_flaged = true;
                 }
             }
         }
