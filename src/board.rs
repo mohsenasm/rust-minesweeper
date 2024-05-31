@@ -66,10 +66,10 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
     // generate bombs
     game_board.number_of_bombs = ((((size.0 * size.1) as f32) * bomb_percentage).round()) as usize;
     let mut remaning_bombs = game_board.number_of_bombs;
-    let mut r = rand::thread_rng();
+    let mut random = rand::thread_rng();
     while remaning_bombs > 0 {
-        let x = r.gen_range(0..size.0);
-        let y = r.gen_range(0..size.1);
+        let x = random.gen_range(0..size.0);
+        let y = random.gen_range(0..size.1);
         if !game_board.cells[x][y].is_bomb {
             game_board.cells[x][y].is_bomb = true;
             remaning_bombs -= 1;
@@ -79,48 +79,22 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
     // fill numbers
     for row in 0..size.0 {
         for column in 0..size.1 {
-            // top
-            if row > 0 {
-                if column > 0 {
-                    if game_board.cells[row - 1][column - 1].is_bomb {
-                        game_board.cells[row][column].number_of_adjusted_bombs += 1;
-                    }
-                }
-                if game_board.cells[row - 1][column].is_bomb {
-                    game_board.cells[row][column].number_of_adjusted_bombs += 1;
-                }
-                if column + 1 < size.1 {
-                    if game_board.cells[row - 1][column + 1].is_bomb {
-                        game_board.cells[row][column].number_of_adjusted_bombs += 1;
-                    }
-                }
-            }
-            // side
-            if column > 0 {
-                if game_board.cells[row][column - 1].is_bomb {
+            for index in game_board.get_adjusted_indices((row, column)) {
+                if game_board.cells[index.0][index.1].is_bomb {
                     game_board.cells[row][column].number_of_adjusted_bombs += 1;
                 }
             }
-            if column + 1 < size.1 {
-                if game_board.cells[row][column + 1].is_bomb {
-                    game_board.cells[row][column].number_of_adjusted_bombs += 1;
-                }
-            }
-            // bottom
-            if row + 1 < size.0 {
-                if column > 0 {
-                    if game_board.cells[row + 1][column - 1].is_bomb {
-                        game_board.cells[row][column].number_of_adjusted_bombs += 1;
-                    }
-                }
-                if game_board.cells[row + 1][column].is_bomb {
-                    game_board.cells[row][column].number_of_adjusted_bombs += 1;
-                }
-                if column + 1 < size.1 {
-                    if game_board.cells[row + 1][column + 1].is_bomb {
-                        game_board.cells[row][column].number_of_adjusted_bombs += 1;
-                    }
-                }
+        }
+    }
+
+    // make a starting point
+    if game_board.number_of_bombs < size.0 * size.1 {
+        loop {
+            let x = random.gen_range(0..size.0);
+            let y = random.gen_range(0..size.1);
+            if game_board.cells[x][y].number_of_adjusted_bombs == 0 {
+                game_board.discover_cell((x, y));
+                break;
             }
         }
     }
@@ -139,44 +113,9 @@ impl Board {
             if self.cells[row][column].is_flaged {
                 self.cells[row][column].is_flaged = false;
             } else {
-                self.cells[row][column].is_discovered = true;
+                self.discover_cell((row, column));
             }
         }
-    }
-
-    fn convet_mouse_to_index(
-        &self,
-        mouse_row: usize,
-        mouse_column: usize,
-    ) -> Option<(usize, usize)> {
-        let row: usize;
-        let column: usize;
-
-        if mouse_row % 2 == 0 {
-            return None;
-        }
-        row = ((mouse_row + 1) / 2) - 1;
-
-        if self.theme.cell_horizontal_padding_enabled {
-            if mouse_column % 4 == 0 {
-                return None;
-            }
-            column = ((mouse_column + (4 - (mouse_column % 4))) / 4) - 1;
-        } else {
-            if mouse_column % 2 == 0 {
-                return None;
-            }
-            column = ((mouse_column + 1) / 2) - 1;
-        }
-
-        if row >= self.size.0 {
-            return None;
-        }
-        if column >= self.size.1 {
-            return None;
-        }
-
-        Some((row, column))
     }
 
     pub fn draw(&self, mut stdout: &Stdout) -> Result<()> {
@@ -250,6 +189,87 @@ impl Board {
         );
 
         Ok(())
+    }
+
+    fn convet_mouse_to_index(
+        &self,
+        mouse_row: usize,
+        mouse_column: usize,
+    ) -> Option<(usize, usize)> {
+        let row: usize;
+        let column: usize;
+
+        if mouse_row % 2 == 0 {
+            return None;
+        }
+        row = ((mouse_row + 1) / 2) - 1;
+
+        if self.theme.cell_horizontal_padding_enabled {
+            if mouse_column % 4 == 0 {
+                return None;
+            }
+            column = ((mouse_column + (4 - (mouse_column % 4))) / 4) - 1;
+        } else {
+            if mouse_column % 2 == 0 {
+                return None;
+            }
+            column = ((mouse_column + 1) / 2) - 1;
+        }
+
+        if row >= self.size.0 {
+            return None;
+        }
+        if column >= self.size.1 {
+            return None;
+        }
+
+        Some((row, column))
+    }
+
+    fn discover_cell(&mut self, (row, column): (usize, usize)) {
+        if !self.cells[row][column].is_discovered && !self.cells[row][column].is_flaged {
+            self.cells[row][column].is_discovered = true;
+            if self.cells[row][column].number_of_adjusted_bombs == 0 {
+                for index in self.get_adjusted_indices((row, column)) {
+                    self.discover_cell(index)
+                }
+            }
+        }
+    }
+
+    fn get_adjusted_indices(&mut self, (row, column): (usize, usize)) -> Vec<(usize, usize)> {
+        let mut result: Vec<(usize, usize)> = Vec::new();
+
+        // top
+        if row > 0 {
+            if column > 0 {
+                result.push((row - 1, column - 1));
+            }
+            result.push((row - 1, column));
+            if column + 1 < self.size.1 {
+                result.push((row - 1, column + 1));
+            }
+        }
+        // side
+        if column > 0 {
+            result.push((row, column - 1));
+        }
+        if column + 1 < self.size.1 {
+            result.push((row, column + 1));
+        }
+        // bottom
+        if row + 1 < self.size.0 {
+            if column > 0 {
+                result.push((row + 1, column - 1));
+            }
+            result.push((row + 1, column));
+
+            if column + 1 < self.size.1 {
+                result.push((row + 1, column + 1));
+            }
+        }
+
+        result
     }
 }
 
