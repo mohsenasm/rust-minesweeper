@@ -128,7 +128,9 @@ impl Board {
                         self.discover_cell((row, column));
                     }
                 } else {
-                    self.set_cell_flag((row, column), true);
+                    if !self.cells[row][column].is_flagged {
+                        self.set_cell_flag((row, column), true);
+                    }
                 }
             }
         }
