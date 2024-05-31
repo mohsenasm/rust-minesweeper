@@ -55,6 +55,7 @@ pub struct Board {
     pub size: (usize, usize),
     pub cells: Vec<Vec<Cell>>,
     pub number_of_bombs: usize,
+    pub remaining_flags: usize,
 }
 
 pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme) -> Board {
@@ -63,10 +64,12 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
         size,
         cells: vec![vec![init_blank_cell(); size.1]; size.0],
         number_of_bombs: 0,
+        remaining_flags: 0,
     };
 
     // generate bombs
     game_board.number_of_bombs = ((((size.0 * size.1) as f32) * bomb_percentage).round()) as usize;
+    game_board.remaining_flags = game_board.number_of_bombs;
     let mut remaning_bombs = game_board.number_of_bombs;
     let mut random = rand::thread_rng();
     while remaning_bombs > 0 {
@@ -120,12 +123,12 @@ impl Board {
                 // discover cell
                 if left_key {
                     if self.cells[row][column].is_flagged {
-                        self.cells[row][column].is_flagged = false;
+                        self.set_cell_flag((row, column), false);
                     } else {
                         self.discover_cell((row, column));
                     }
                 } else {
-                    self.cells[row][column].is_flagged = true;
+                    self.set_cell_flag((row, column), true);
                 }
             }
         }
@@ -196,23 +199,15 @@ impl Board {
         line3 += &self.theme.corner_bottom_right;
         println!("{}\r", line3);
 
-        let mut number_of_flags = 0;
+        println!("remaining flags: {}\r", self.remaining_flags);
 
         for row in 0..self.size.0 {
             for column in 0..self.size.1 {
                 if self.cells[row][column].is_bomb && self.cells[row][column].is_discovered {
                     return Err(Error::new(ErrorKind::BrokenPipe, "Boom!!"));
                 }
-                if self.cells[row][column].is_flagged {
-                    number_of_flags += 1;
-                }
             }
         }
-
-        println!(
-            "remaining flags: {}\r",
-            self.number_of_bombs - number_of_flags
-        );
 
         Ok(())
     }
@@ -263,6 +258,18 @@ impl Board {
         }
     }
 
+    fn set_cell_flag(&mut self, (row, column): (usize, usize), flag: bool) {
+        if flag {
+            if self.remaining_flags > 0 {
+                self.cells[row][column].is_flagged = flag;
+                self.remaining_flags -= 1;
+            }
+        } else {
+            self.cells[row][column].is_flagged = flag;
+            self.remaining_flags += 1;
+        }
+    }
+
     fn discover_or_flag_adjusted_cells(&mut self, (row, column): (usize, usize)) {
         let adjusted_indices = &self.get_adjusted_indices((row, column));
         let mut number_of_unknown_adjusted_cells = 0;
@@ -282,14 +289,15 @@ impl Board {
             for index in adjusted_indices {
                 self.discover_cell(*index);
             }
-        } else if self.cells[row][column].number_of_adjusted_bombs - number_of_flagged_adjusted_cells
+        } else if self.cells[row][column].number_of_adjusted_bombs
+            - number_of_flagged_adjusted_cells
             == number_of_unknown_adjusted_cells
         {
             for index in adjusted_indices {
                 if !self.cells[index.0][index.1].is_discovered
                     && !self.cells[index.0][index.1].is_flagged
                 {
-                    self.cells[index.0][index.1].is_flagged = true;
+                    self.set_cell_flag((row, column), true);
                 }
             }
         }
