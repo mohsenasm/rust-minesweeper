@@ -272,7 +272,8 @@ impl Board {
     }
 
     fn set_cell_flag(&mut self, (row, column): (usize, usize), flag: bool) {
-        if self.cells[row][column].is_flagged != flag { // need to change
+        if self.cells[row][column].is_flagged != flag {
+            // need to change
             if flag {
                 if self.remaining_flags > 0 {
                     self.cells[row][column].is_flagged = flag;
@@ -307,8 +308,7 @@ impl Board {
                 self.discover_cell(*index);
             }
         } else if self.cells[row][column].number_of_adjusted_bombs
-            - number_of_flagged_adjusted_cells
-            == number_of_unknown_adjusted_cells
+            == number_of_flagged_adjusted_cells + number_of_unknown_adjusted_cells
         {
             for index in adjusted_indices {
                 if !self.cells[index.0][index.1].is_discovered
