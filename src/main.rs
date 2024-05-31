@@ -1,79 +1,67 @@
-//! Demonstrates how to block read events.
-//!
-//! cargo run --example event-read
-
-use std::io;
-
 use crossterm::event::{
-    poll, KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+    KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, KeyboardEnhancementFlags, MouseButton,
+    MouseEventKind, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
 use crossterm::{
-    cursor::position,
-    event::{
-        read, DisableBracketedPaste, DisableFocusChange, DisableMouseCapture, EnableBracketedPaste,
-        EnableFocusChange, EnableMouseCapture, Event, KeyCode,
-    },
+    event::{read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute, queue,
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use std::time::Duration;
+use std::io;
 
-const HELP: &str = r#"Blocking read()
- - Keyboard, mouse, focus and terminal resize events enabled
- - Hit "c" to print current cursor position
- - Use Esc to quit
-"#;
+mod board;
+use board::Board;
 
-fn print_events() -> io::Result<()> {
+const CTRL_C_KEY: KeyEvent = KeyEvent {
+    code: KeyCode::Char('c'),
+    modifiers: KeyModifiers::CONTROL,
+    kind: KeyEventKind::Press,
+    state: KeyEventState::NONE,
+};
+const Q_KEY: KeyEvent = KeyEvent {
+    code: KeyCode::Char('q'),
+    modifiers: KeyModifiers::NONE,
+    kind: KeyEventKind::Press,
+    state: KeyEventState::NONE,
+};
+const ESC_KEY: KeyEvent = KeyEvent {
+    code: KeyCode::Esc,
+    modifiers: KeyModifiers::NONE,
+    kind: KeyEventKind::Press,
+    state: KeyEventState::NONE,
+};
+
+fn event_loop(game_board: Board) -> io::Result<()> {
     loop {
-        // Blocking read
         let event = read()?;
 
-        println!("Event: {:?}\r", event);
-
-        if event == Event::Key(KeyCode::Char('c').into()) {
-            println!("Cursor position: {:?}\r", position());
+        if let Event::Mouse(mouse_event) = event {
+            if mouse_event.kind == MouseEventKind::Moved {
+                game_board.mouse_hover(mouse_event.row, mouse_event.column);
+            }
+            if mouse_event.kind == MouseEventKind::Down(MouseButton::Left) {
+                game_board.mouse_down(mouse_event.row, mouse_event.column);
+            }
         }
 
-        if let Event::Resize(x, y) = event {
-            let (original_size, new_size) = flush_resize_events((x, y));
-            println!("Resize from: {:?}, to: {:?}\r", original_size, new_size);
-        }
-
-        if event == Event::Key(KeyCode::Esc.into()) {
-            break;
+        if let Event::Key(key_event) = event {
+            // exit on CTRL_C, ESC, or Q
+            if key_event == CTRL_C_KEY || key_event == ESC_KEY || key_event == Q_KEY {
+                break;
+            }
         }
     }
-
     Ok(())
 }
 
-// Resize events can occur in batches.
-// With a simple loop they can be flushed.
-// This function will keep the first and last resize event.
-fn flush_resize_events(first_resize: (u16, u16)) -> ((u16, u16), (u16, u16)) {
-    let mut last_resize = first_resize;
-    while let Ok(true) = poll(Duration::from_millis(50)) {
-        if let Ok(Event::Resize(x, y)) = read() {
-            last_resize = (x, y);
-        }
-    }
-
-    (first_resize, last_resize)
-}
-
 fn main() -> io::Result<()> {
-    println!("{}", HELP);
-
+    // terminal setup
     enable_raw_mode()?;
-
     let mut stdout = io::stdout();
-
     let supports_keyboard_enhancement = matches!(
         crossterm::terminal::supports_keyboard_enhancement(),
         Ok(true)
     );
-
     if supports_keyboard_enhancement {
         queue!(
             stdout,
@@ -85,29 +73,21 @@ fn main() -> io::Result<()> {
             )
         )?;
     }
+    execute!(stdout, EnableMouseCapture,)?;
 
-    execute!(
-        stdout,
-        EnableBracketedPaste,
-        EnableFocusChange,
-        EnableMouseCapture,
-    )?;
+    // board setup
+    let game_board = Board { size: (80, 80) };
+    game_board.init_random_game();
 
-    if let Err(e) = print_events() {
+    // event_loop
+    if let Err(e) = event_loop(game_board) {
         println!("Error: {:?}\r", e);
     }
 
+    // terminal exit
     if supports_keyboard_enhancement {
         queue!(stdout, PopKeyboardEnhancementFlags)?;
     }
-
-    execute!(
-        stdout,
-        DisableBracketedPaste,
-        PopKeyboardEnhancementFlags,
-        DisableFocusChange,
-        DisableMouseCapture
-    )?;
-
+    execute!(stdout, PopKeyboardEnhancementFlags, DisableMouseCapture)?;
     disable_raw_mode()
 }
