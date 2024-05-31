@@ -70,9 +70,9 @@ impl Board {
     }
 
     pub fn mouse_down(&mut self, mouse_row: usize, mouse_column: usize) {
-        let (is_valid, row, column) = self.convet_mouse_to_index(mouse_row, mouse_column);
-        if is_valid {
-            if !self.cells[row][column].is_flaged {
+        let index = self.convet_mouse_to_index(mouse_row, mouse_column);
+        if let Some((row, column)) = index {
+            if self.cells[row][column].is_flaged {
                 self.cells[row][column].is_flaged = false;
             } else {
                 self.cells[row][column].is_discovered = true;
@@ -80,36 +80,39 @@ impl Board {
         }
     }
 
-    fn convet_mouse_to_index(&self, mouse_row: usize, mouse_column: usize) -> (bool, usize, usize) {
+    fn convet_mouse_to_index(
+        &self,
+        mouse_row: usize,
+        mouse_column: usize,
+    ) -> Option<(usize, usize)> {
         let row: usize;
         let column: usize;
-        let mut is_valid: bool = true;
 
         if mouse_row % 2 == 0 {
-            is_valid = false;
+            return None;
         }
         row = ((mouse_row + 1) / 2) - 1;
 
         if self.theme.cell_horizontal_padding_enabled {
             if mouse_column % 4 == 0 {
-                is_valid = false;
+                return None;
             }
             column = ((mouse_column + (4 - (mouse_column % 4))) / 4) - 1;
         } else {
             if mouse_column % 2 == 0 {
-                is_valid = false;
+                return None;
             }
             column = ((mouse_column + 1) / 2) - 1;
         }
 
         if row >= self.size.0 {
-            is_valid = false;
+            return None;
         }
         if column >= self.size.1 {
-            is_valid = false;
+            return None;
         }
 
-        (is_valid, row, column)
+        Some((row, column))
     }
 
     pub fn draw(&self, mut stdout: &Stdout) -> Result<()> {
@@ -183,5 +186,33 @@ impl Board {
         );
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::theme::default_theme;
+
+    use super::*;
+
+    #[test]
+    fn convet_mouse_to_index() {
+        let game_board = init_random_game((5, 10), default_theme());
+
+        assert_eq!(game_board.convet_mouse_to_index(0, 0), None);
+        assert_eq!(game_board.convet_mouse_to_index(0, 1), None);
+        assert_eq!(game_board.convet_mouse_to_index(0, 2), None);
+        assert_eq!(game_board.convet_mouse_to_index(0, 3), None);
+        assert_eq!(game_board.convet_mouse_to_index(0, 4), None);
+
+        assert_eq!(game_board.convet_mouse_to_index(1, 0), None);
+        assert_eq!(game_board.convet_mouse_to_index(1, 1), Some((0, 0)));
+        assert_eq!(game_board.convet_mouse_to_index(1, 2), Some((0, 0)));
+        assert_eq!(game_board.convet_mouse_to_index(1, 3), Some((0, 0)));
+        assert_eq!(game_board.convet_mouse_to_index(1, 4), None);
+        assert_eq!(game_board.convet_mouse_to_index(1, 5), Some((0, 1)));
+        assert_eq!(game_board.convet_mouse_to_index(1, 6), Some((0, 1)));
+        assert_eq!(game_board.convet_mouse_to_index(1, 7), Some((0, 1)));
+        assert_eq!(game_board.convet_mouse_to_index(1, 8), None);
     }
 }
