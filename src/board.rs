@@ -6,6 +6,8 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
+use rand::Rng;
+
 use crate::theme::Theme;
 
 #[derive(Clone)]
@@ -52,14 +54,76 @@ pub struct Board {
     pub number_of_flags: usize,
 }
 
-pub fn init_random_game(size: (usize, usize), theme: Theme) -> Board {
-    let game_board = Board {
+pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme) -> Board {
+    let mut game_board = Board {
         theme,
         size,
         cells: vec![vec![init_blank_cell(); size.1]; size.0],
         number_of_bombs: 0,
         number_of_flags: 0,
     };
+
+    // generate bombs
+    game_board.number_of_bombs = ((((size.0 * size.1) as f32) * bomb_percentage).round()) as usize;
+    let mut remaning_bombs = game_board.number_of_bombs;
+    let mut r = rand::thread_rng();
+    while remaning_bombs > 0 {
+        let x = r.gen_range(0..size.0);
+        let y = r.gen_range(0..size.1);
+        if !game_board.cells[x][y].is_bomb {
+            game_board.cells[x][y].is_bomb = true;
+            remaning_bombs -= 1;
+        }
+    }
+
+    // fill numbers
+    for row in 0..size.0 {
+        for column in 0..size.1 {
+            // top
+            if row > 0 {
+                if column > 0 {
+                    if game_board.cells[row - 1][column - 1].is_bomb {
+                        game_board.cells[row][column].number_of_adjusted_bombs += 1;
+                    }
+                }
+                if game_board.cells[row - 1][column].is_bomb {
+                    game_board.cells[row][column].number_of_adjusted_bombs += 1;
+                }
+                if column + 1 < size.1 {
+                    if game_board.cells[row - 1][column + 1].is_bomb {
+                        game_board.cells[row][column].number_of_adjusted_bombs += 1;
+                    }
+                }
+            }
+            // side
+            if column > 0 {
+                if game_board.cells[row][column - 1].is_bomb {
+                    game_board.cells[row][column].number_of_adjusted_bombs += 1;
+                }
+            }
+            if column + 1 < size.1 {
+                if game_board.cells[row][column + 1].is_bomb {
+                    game_board.cells[row][column].number_of_adjusted_bombs += 1;
+                }
+            }
+            // bottom
+            if row + 1 < size.0 {
+                if column > 0 {
+                    if game_board.cells[row + 1][column - 1].is_bomb {
+                        game_board.cells[row][column].number_of_adjusted_bombs += 1;
+                    }
+                }
+                if game_board.cells[row + 1][column].is_bomb {
+                    game_board.cells[row][column].number_of_adjusted_bombs += 1;
+                }
+                if column + 1 < size.1 {
+                    if game_board.cells[row + 1][column + 1].is_bomb {
+                        game_board.cells[row][column].number_of_adjusted_bombs += 1;
+                    }
+                }
+            }
+        }
+    }
 
     game_board
 }
@@ -197,7 +261,7 @@ mod tests {
 
     #[test]
     fn convet_mouse_to_index() {
-        let game_board = init_random_game((5, 10), default_theme());
+        let game_board = init_random_game((5, 10), 0.3, default_theme());
 
         assert_eq!(game_board.convet_mouse_to_index(0, 0), None);
         assert_eq!(game_board.convet_mouse_to_index(0, 1), None);

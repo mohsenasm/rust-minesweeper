@@ -91,7 +91,7 @@ fn main() -> Result<()> {
     execute!(stdout, EnableMouseCapture)?;
 
     // board setup
-    let game_board = init_random_game((5, 10), default_theme());
+    let game_board = init_random_game((5, 10), 0.3, default_theme());
 
     // event_loop
     if let Err(e) = event_loop(game_board, &stdout) {
