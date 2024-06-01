@@ -88,22 +88,22 @@ pub fn borderless_theme() -> Theme {
 }
 
 pub fn dark_border_theme() -> Theme {
-    let black_foreground = SetForegroundColor(Color::Black).to_string();
-    let grey_background: String = SetBackgroundColor(Color::DarkGrey).to_string();
+    let foreground = SetForegroundColor(Color::DarkGrey).to_string();
+    let background: String = SetBackgroundColor(Color::Grey).to_string();
     let reset_color = ResetColor.to_string();
 
     let mut t = border_theme();
     t.name = "dark_border_theme".to_owned();
-    t.add_color_before_lines(&black_foreground);
+    t.add_color_before_lines(&foreground);
     t.add_color_after_lines(&reset_color);
 
     t.bomb = format!(
-        "{}{}{}{}",
-        black_foreground, grey_background, t.bomb, reset_color
+        "{}{}{}",
+        background, t.bomb, reset_color
     );
     t.flag = format!(
-        "{}{}{}{}",
-        black_foreground, grey_background, t.flag, reset_color
+        "{}{}{}",
+        background, t.flag, reset_color
     );
 
     t
