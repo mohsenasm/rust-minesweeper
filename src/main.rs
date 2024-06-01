@@ -1,3 +1,4 @@
+use clap::Parser;
 use crossterm::event::{
     KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, KeyboardEnhancementFlags, MouseButton,
     MouseEventKind, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
@@ -8,12 +9,12 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use std::io::{stdout, Result, Stdout};
-use theme::default_theme;
 
 mod board;
 use board::{init_random_game, Board};
 
 mod theme;
+use theme::get_theme;
 
 const CTRL_C_KEY: KeyEvent = KeyEvent {
     code: KeyCode::Char('c'),
@@ -99,7 +100,69 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
     Ok(())
 }
 
+/// A command-line minesweeper with mouse support
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// The board size
+    #[arg(short, long, default_value = "10x5")]
+    size: String,
+
+    /// The bomb percentage
+    #[arg(short, long, default_value_t = 0.2)]
+    bomb_percentage: f32,
+
+    /// The board theme (colored, border, dark_border, borderless)
+    #[arg(short, long, default_value = "colored")]
+    theme: String,
+}
+
 fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let size: Option<(usize, usize)> = {
+        let size_str = args.size.split('x').collect::<Vec<&str>>();
+        if size_str.len() != 2 {
+            println!("wrong size argument {}, enter it like 10x5\r", args.size);
+            None
+        } else {
+            let width_parsed = size_str[0].parse::<usize>();
+            let height_parsed = size_str[1].parse::<usize>();
+            if let Err(ref e) = width_parsed {
+                println!("wrong size argument {}, enter it like 10x5\r", args.size);
+                println!("error detail: {}\r", e.to_string());
+                None
+            } else if let Err(ref e) = height_parsed {
+                println!("wrong size argument {}, enter it like 10x5\r", args.size);
+                println!("error detail: {}\r", e.to_string());
+                None
+            } else {
+                let width = width_parsed.unwrap();
+                let height = height_parsed.unwrap();
+
+                if width == 0 || height == 0 {
+                    println!("wrong size argument {}, enter it like 10x5\r", args.size);
+                    println!("error detail: the number is zero\r");
+                    None
+                } else {
+                    Some((width, height))
+                }
+            }
+        }
+    };
+
+    if size == None {
+        return Ok(());
+    }
+    let (width, height) = size.unwrap();
+
+    let theme = get_theme(&args.theme);
+    if theme == None {
+        println!("not found theme {}\r", &args.theme);
+        return Ok(());
+    }
+    let theme = theme.unwrap();
+
     // terminal setup
     enable_raw_mode()?;
     let mut stdout = stdout();
@@ -121,7 +184,7 @@ fn main() -> Result<()> {
     execute!(stdout, EnableMouseCapture)?;
 
     // board setup
-    let game_board = init_random_game((5, 10), 0.2, default_theme());
+    let game_board = init_random_game((height, width), args.bomb_percentage, theme);
 
     // event_loop
     if let Err(e) = event_loop(game_board, &stdout) {

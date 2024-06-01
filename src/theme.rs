@@ -1,5 +1,6 @@
 use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
 
+#[derive(PartialEq)]
 pub struct Theme {
     pub name: String,
     // all other string fileds should take at most one space
@@ -29,8 +30,14 @@ pub struct Theme {
     pub colored_numbers: bool,
 }
 
-pub fn default_theme() -> Theme {
-    border_theme()
+pub fn get_theme(theme: &String) -> Option<Theme> {
+    match theme.as_str() {
+        "colored" => Some(colored_theme()),
+        "border" => Some(border_theme()),
+        "dark_border" => Some(dark_border_theme()),
+        "borderless" => Some(borderless_theme()),
+        _ => None
+    }
 }
 
 pub fn border_theme() -> Theme {
