@@ -25,6 +25,8 @@ pub struct Theme {
     pub flag: String,
     pub empty: String,
     pub unknown: String,
+
+    pub colored_numbers: bool,
 }
 
 pub fn default_theme() -> Theme {
@@ -56,6 +58,8 @@ pub fn border_theme() -> Theme {
         flag: 'F'.to_string(),
         empty: ' '.to_string(),
         unknown: '█'.to_string(),
+
+        colored_numbers: false,
     }
 }
 
@@ -84,11 +88,13 @@ pub fn borderless_theme() -> Theme {
         flag: 'F'.to_string(),
         empty: ' '.to_string(),
         unknown: '-'.to_string(),
+
+        colored_numbers: false,
     }
 }
 
 pub fn dark_border_theme() -> Theme {
-    let foreground = SetForegroundColor(Color::DarkGrey).to_string();
+    let foreground: String = SetForegroundColor(Color::DarkGrey).to_string();
     let background: String = SetBackgroundColor(Color::Grey).to_string();
     let reset_color = ResetColor.to_string();
 
@@ -105,6 +111,14 @@ pub fn dark_border_theme() -> Theme {
         "{}{}{}",
         background, t.flag, reset_color
     );
+
+    t
+}
+
+pub fn colored_theme() -> Theme {
+    let mut t = dark_border_theme();
+    t.name = "colored_theme".to_owned();
+    t.colored_numbers = true;
 
     t
 }
@@ -136,5 +150,23 @@ impl Theme {
         self.edge_bottom = format!("{}{}", self.edge_bottom, color);
         self.edge_left = format!("{}{}", self.edge_left, color);
         self.edge_right = format!("{}{}", self.edge_right, color);
+    }
+
+    pub fn format_number_of_adjusted_bombs(&self, number_of_adjusted_bombs: u8) -> String {
+        if self.colored_numbers {
+            format!(
+                "{}{}{}",
+                (match number_of_adjusted_bombs {
+                    1 => SetForegroundColor(Color::Blue).to_string(),
+                    2 => SetForegroundColor(Color::Green).to_string(),
+                    3 => SetForegroundColor(Color::Red).to_string(),
+                    4 => SetForegroundColor(Color::DarkBlue).to_string(),
+                    5 => SetForegroundColor(Color::DarkRed).to_string(),
+                    _ => SetForegroundColor(Color::DarkMagenta).to_string()
+                }), number_of_adjusted_bombs.to_string(), ResetColor.to_string()
+            )
+        } else {
+            number_of_adjusted_bombs.to_string()
+        }
     }
 }

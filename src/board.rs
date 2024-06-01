@@ -8,7 +8,7 @@ use crossterm::{
 
 use rand::Rng;
 
-use crate::theme::{border_theme, borderless_theme, dark_border_theme, Theme};
+use crate::theme::{border_theme, borderless_theme, colored_theme, dark_border_theme, Theme};
 
 #[derive(Clone)]
 pub struct Cell {
@@ -37,7 +37,7 @@ impl Cell {
                 if self.number_of_adjusted_bombs == 0 {
                     return theme.empty.clone();
                 } else {
-                    return self.number_of_adjusted_bombs.to_string();
+                    return theme.format_number_of_adjusted_bombs(self.number_of_adjusted_bombs);
                 }
             }
         } else {
@@ -426,6 +426,9 @@ impl Board {
                 self.theme = dark_border_theme();
             }
             "dark_border_theme" => {
+                self.theme = colored_theme();
+            }
+            "colored_theme" => {
                 self.theme = borderless_theme();
             }
             _ => {
