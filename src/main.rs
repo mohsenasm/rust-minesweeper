@@ -33,6 +33,18 @@ const ESC_KEY: KeyEvent = KeyEvent {
     kind: KeyEventKind::Press,
     state: KeyEventState::NONE,
 };
+const TAB_KEY: KeyEvent = KeyEvent {
+    code: KeyCode::Tab,
+    modifiers: KeyModifiers::NONE,
+    kind: KeyEventKind::Press,
+    state: KeyEventState::NONE,
+};
+const T_KEY: KeyEvent = KeyEvent {
+    code: KeyCode::Char('t'),
+    modifiers: KeyModifiers::NONE,
+    kind: KeyEventKind::Press,
+    state: KeyEventState::NONE,
+};
 
 fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
     // first draw
@@ -63,6 +75,10 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
             // exit on CTRL_C, ESC, or Q
             if key_event == CTRL_C_KEY || key_event == ESC_KEY || key_event == Q_KEY {
                 break;
+            }
+            // change theme on TAB or T
+            if key_event == TAB_KEY || key_event == T_KEY {
+                game_board.change_theme();
             }
         }
 

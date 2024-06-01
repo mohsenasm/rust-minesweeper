@@ -8,7 +8,7 @@ use crossterm::{
 
 use rand::Rng;
 
-use crate::theme::Theme;
+use crate::theme::{border_theme, dark_border_theme, Theme};
 
 #[derive(Clone)]
 pub struct Cell {
@@ -244,21 +244,33 @@ impl Board {
         let row: usize;
         let column: usize;
 
-        if mouse_row % 2 == 0 {
-            return None;
-        }
-        row = ((mouse_row + 1) / 2) - 1;
+        if self.theme.border_enabled {
+            if mouse_row % 2 == 0 {
+                return None;
+            }
+            row = ((mouse_row + 1) / 2) - 1;
 
-        if self.theme.cell_horizontal_padding_enabled {
-            if mouse_column % 4 == 0 {
-                return None;
+            if self.theme.cell_horizontal_padding_enabled {
+                if mouse_column % 4 == 0 {
+                    return None;
+                }
+                column = ((mouse_column + (4 - (mouse_column % 4))) / 4) - 1;
+            } else {
+                if mouse_column % 2 == 0 {
+                    return None;
+                }
+                column = ((mouse_column + 1) / 2) - 1;
             }
-            column = ((mouse_column + (4 - (mouse_column % 4))) / 4) - 1;
         } else {
-            if mouse_column % 2 == 0 {
-                return None;
+            row = mouse_row;
+            if self.theme.cell_horizontal_padding_enabled {
+                if mouse_column % 2 == 0 {
+                    return None;
+                }
+                column = ((mouse_column + 1) / 2) - 1;
+            } else {
+                column = mouse_column;
             }
-            column = ((mouse_column + 1) / 2) - 1;
         }
 
         if row >= self.size.0 {
@@ -364,6 +376,20 @@ impl Board {
         }
 
         result
+    }
+
+    pub fn change_theme(&mut self) {
+        match self.theme.name.as_str() {
+            "border_theme" => {
+                self.theme = dark_border_theme();
+            }
+            // "dark_border_theme" => {
+            //     self.theme = borderless_theme();
+            // }
+            _ => {
+                self.theme = border_theme();
+            }
+        }
     }
 }
 
