@@ -100,19 +100,19 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
     Ok(())
 }
 
-/// A command-line minesweeper with mouse support
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(version, about = "A command-line minesweeper game with mouse support. 
+Press 'Tab' to change the theme and 'h' to get a hint.", long_about = None)]
 struct Args {
     /// The board size
-    #[arg(short, long, default_value = "10x5")]
+    #[arg(short, long, default_value = "12x8")]
     size: String,
 
     /// The bomb percentage
     #[arg(short, long, default_value_t = 0.2)]
     bomb_percentage: f32,
 
-    /// The board theme (colored, border, dark_border, borderless)
+    /// The board theme (colored, border, dark_border, borderless, colored_borderless)
     #[arg(short, long, default_value = "colored")]
     theme: String,
 }
