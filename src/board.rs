@@ -80,44 +80,56 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
             remaning_bombs -= 1;
         }
     }
-
-    // fill numbers
-    let mut non_bomb_cells: Vec<(u8, (usize, usize))> = Vec::new();
-    for row in 0..size.0 {
-        for column in 0..size.1 {
-            for index in game_board.get_adjusted_indices((row, column)) {
-                if game_board.cells[index.0][index.1].is_bomb {
-                    game_board.cells[row][column].number_of_adjusted_bombs += 1;
-                }
-            }
-            if !game_board.cells[row][column].is_bomb {
-                non_bomb_cells.push((
-                    game_board.cells[row][column].number_of_adjusted_bombs,
-                    (row, column),
-                ));
-            }
-        }
-    }
+    game_board.fill_numbers();
 
     // make a starting point
-    if non_bomb_cells.len() > 0 {
-        non_bomb_cells.sort_by_key(|x: &(u8, (usize, usize))| x.0);
-        let min_number_of_adjusted_bombs = non_bomb_cells[0].0;
-        let mut last_index: usize = 0;
-        for (index, cell) in non_bomb_cells.iter().enumerate() {
-            if cell.0 == min_number_of_adjusted_bombs {
-                last_index = index
-            } else {
-                break;
-            }
-        }
-        let i = random.gen_range(0..last_index);
-        game_board.discover_cell(non_bomb_cells[i].1);
-    }
+    game_board.hint();
+
     game_board
 }
 
 impl Board {
+    fn fill_numbers(&mut self) {
+        for row in 0..self.size.0 {
+            for column in 0..self.size.1 {
+                for index in self.get_adjusted_indices((row, column)) {
+                    if self.cells[index.0][index.1].is_bomb {
+                        self.cells[row][column].number_of_adjusted_bombs += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn hint(&mut self) {
+        let mut random = rand::thread_rng();
+        let mut non_bomb_cells: Vec<(u8, (usize, usize))> = Vec::new();
+        for row in 0..self.size.0 {
+            for column in 0..self.size.1 {
+                if !self.cells[row][column].is_bomb && !self.cells[row][column].is_discovered {
+                    non_bomb_cells.push((
+                        self.cells[row][column].number_of_adjusted_bombs,
+                        (row, column),
+                    ));
+                }
+            }
+        }
+        if non_bomb_cells.len() > 0 {
+            non_bomb_cells.sort_by_key(|x: &(u8, (usize, usize))| x.0);
+            let min_number_of_adjusted_bombs = non_bomb_cells[0].0;
+            let mut last_index: usize = 0;
+            for (index, cell) in non_bomb_cells.iter().enumerate() {
+                if cell.0 == min_number_of_adjusted_bombs {
+                    last_index = index
+                } else {
+                    break;
+                }
+            }
+            let i = random.gen_range(0..=last_index);
+            self.discover_cell(non_bomb_cells[i].1);
+        }
+    }
+
     pub fn mouse_hover(&mut self, _row: usize, _column: usize) {
         // TODO: change color of the pointing cell
     }

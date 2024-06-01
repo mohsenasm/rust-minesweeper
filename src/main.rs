@@ -45,6 +45,12 @@ const T_KEY: KeyEvent = KeyEvent {
     kind: KeyEventKind::Press,
     state: KeyEventState::NONE,
 };
+const H_KEY: KeyEvent = KeyEvent {
+    code: KeyCode::Char('h'),
+    modifiers: KeyModifiers::NONE,
+    kind: KeyEventKind::Press,
+    state: KeyEventState::NONE,
+};
 
 fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
     // first draw
@@ -79,6 +85,10 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
             // change theme on TAB or T
             if key_event == TAB_KEY || key_event == T_KEY {
                 game_board.change_theme();
+            }
+            // discover a non-bomb on H
+            if key_event == H_KEY {
+                game_board.hint();
             }
         }
 
