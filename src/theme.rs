@@ -30,19 +30,29 @@ pub struct Theme {
     pub colored_numbers: bool,
 }
 
-pub fn get_theme(theme: &String) -> Option<Theme> {
-    match theme.as_str() {
+pub fn get_theme(theme_name: &String) -> Option<Theme> {
+    match theme_name.as_str() {
         "colored" => Some(colored_theme()),
         "border" => Some(border_theme()),
         "dark_border" => Some(dark_border_theme()),
+        "colored_borderless" => Some(colored_borderless_theme()),
         "borderless" => Some(borderless_theme()),
         _ => None
+    }
+}
+pub fn rotate_theme_name(theme_name: &String) -> String {
+    match theme_name.as_str() {
+        "colored" => "border".to_owned(),
+        "border" => "dark_border".to_owned(),
+        "dark_border" => "borderless".to_owned(),
+        "borderless" => "colored_borderless".to_owned(),
+        _ => "colored".to_owned(),
     }
 }
 
 pub fn border_theme() -> Theme {
     Theme {
-        name: "border_theme".to_owned(),
+        name: "border".to_owned(),
         cell_horizontal_padding_enabled: true,
         cell_horizontal_padding: ' '.to_string(),
 
@@ -72,7 +82,7 @@ pub fn border_theme() -> Theme {
 
 pub fn borderless_theme() -> Theme {
     Theme {
-        name: "borderless_theme".to_owned(),
+        name: "borderless".to_owned(),
         cell_horizontal_padding_enabled: false,
         cell_horizontal_padding: "".to_string(),
 
@@ -106,7 +116,7 @@ pub fn dark_border_theme() -> Theme {
     let reset_color = ResetColor.to_string();
 
     let mut t = border_theme();
-    t.name = "dark_border_theme".to_owned();
+    t.name = "dark_border".to_owned();
     t.add_color_before_lines(&foreground);
     t.add_color_after_lines(&reset_color);
 
@@ -124,7 +134,15 @@ pub fn dark_border_theme() -> Theme {
 
 pub fn colored_theme() -> Theme {
     let mut t = dark_border_theme();
-    t.name = "colored_theme".to_owned();
+    t.name = "colored".to_owned();
+    t.colored_numbers = true;
+
+    t
+}
+
+pub fn colored_borderless_theme() -> Theme {
+    let mut t = borderless_theme();
+    t.name = "colored_borderless".to_owned();
     t.colored_numbers = true;
 
     t

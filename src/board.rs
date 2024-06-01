@@ -8,7 +8,7 @@ use crossterm::{
 
 use rand::Rng;
 
-use crate::theme::{border_theme, borderless_theme, colored_theme, dark_border_theme, Theme};
+use crate::theme::{get_theme, rotate_theme_name, Theme};
 
 #[derive(Clone)]
 pub struct Cell {
@@ -421,25 +421,16 @@ impl Board {
     }
 
     pub fn change_theme(&mut self) {
-        match self.theme.name.as_str() {
-            "border_theme" => {
-                self.theme = dark_border_theme();
-            }
-            "dark_border_theme" => {
-                self.theme = colored_theme();
-            }
-            "colored_theme" => {
-                self.theme = borderless_theme();
-            }
-            _ => {
-                self.theme = border_theme();
-            }
+        if let Some(theme) = get_theme(&rotate_theme_name(&self.theme.name)) {
+            self.theme = theme;
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::theme::border_theme;
+
     use super::*;
 
     #[test]
