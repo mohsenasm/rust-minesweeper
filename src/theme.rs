@@ -3,10 +3,12 @@ use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor
 pub struct Theme {
     pub name: String,
     // all other string fileds should take at most one space
-    pub cell_horizontal_padding_enabled: bool, // if is false, we ignore cell_horizontal_padding
+    pub cell_horizontal_padding_enabled: bool,
     pub cell_horizontal_padding: String,
 
-    pub border_enabled: bool, // if is false, you should set the following params to ""
+    pub outer_border_enabled: bool,
+    pub inner_border_row_enabled: bool,
+    pub inner_border_column_enabled: bool,
     pub line_horizontal: String,
     pub line_vertical: String,
     pub line_cross: String,
@@ -35,7 +37,9 @@ pub fn border_theme() -> Theme {
         cell_horizontal_padding_enabled: true,
         cell_horizontal_padding: ' '.to_string(),
 
-        border_enabled: true,
+        outer_border_enabled: true,
+        inner_border_row_enabled: true,
+        inner_border_column_enabled: true,
         line_horizontal: '─'.to_string(),
         line_vertical: '│'.to_string(),
         line_cross: '┼'.to_string(),
@@ -55,31 +59,33 @@ pub fn border_theme() -> Theme {
     }
 }
 
-// pub fn borderless_theme() -> Theme {
-//     Theme {
-//         name: "borderless_theme".to_owned(),
-//         cell_horizontal_padding_enabled: false,
-//         cell_horizontal_padding: "".to_string(),
+pub fn borderless_theme() -> Theme {
+    Theme {
+        name: "borderless_theme".to_owned(),
+        cell_horizontal_padding_enabled: false,
+        cell_horizontal_padding: "".to_string(),
 
-//         border_enabled: false,
-//         line_horizontal: "".to_string(),
-//         line_vertical: "".to_string(),
-//         line_cross: "".to_string(),
-//         corner_top_left: "".to_string(),
-//         corner_top_right: "".to_string(),
-//         corner_bottom_left: "".to_string(),
-//         corner_bottom_right: "".to_string(),
-//         edge_top: "".to_string(),
-//         edge_bottom: "".to_string(),
-//         edge_left: "".to_string(),
-//         edge_right: "".to_string(),
+        outer_border_enabled: false,
+        inner_border_row_enabled: false,
+        inner_border_column_enabled: true,
+        line_horizontal: "".to_string(),
+        line_vertical: ' '.to_string(),
+        line_cross: "".to_string(),
+        corner_top_left: "".to_string(),
+        corner_top_right: "".to_string(),
+        corner_bottom_left: "".to_string(),
+        corner_bottom_right: "".to_string(),
+        edge_top: "".to_string(),
+        edge_bottom: "".to_string(),
+        edge_left: "".to_string(),
+        edge_right: "".to_string(),
 
-//         bomb: 'B'.to_string(),
-//         flag: 'F'.to_string(),
-//         empty: ' '.to_string(),
-//         unknown: '-'.to_string(),
-//     }
-// }
+        bomb: 'B'.to_string(),
+        flag: 'F'.to_string(),
+        empty: ' '.to_string(),
+        unknown: '-'.to_string(),
+    }
+}
 
 pub fn dark_border_theme() -> Theme {
     let black_foreground = SetForegroundColor(Color::Black).to_string();

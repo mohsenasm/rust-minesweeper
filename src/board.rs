@@ -8,7 +8,7 @@ use crossterm::{
 
 use rand::Rng;
 
-use crate::theme::{border_theme, dark_border_theme, Theme};
+use crate::theme::{border_theme, borderless_theme, dark_border_theme, Theme};
 
 #[derive(Clone)]
 pub struct Cell {
@@ -123,7 +123,7 @@ impl Board {
     }
 
     pub fn mouse_down(&mut self, mouse_row: usize, mouse_column: usize, left_key: bool) {
-        let index = self.convet_mouse_to_index(mouse_row, mouse_column);
+        let index = self.convert_mouse_to_index(mouse_row, mouse_column);
         if let Some((row, column)) = index {
             if self.cells[row][column].is_discovered {
                 // fill flags for adjusted cells, if possible
@@ -152,8 +152,8 @@ impl Board {
         queue!(stdout, MoveTo(0, 0))?;
 
         for row in 0..self.size.0 {
-            // each row has two lines, one for border and one for the content
-            // border line
+            // each row has two rows, one for border and one for the content
+            // outer/inner border row
             let mut line1 = String::new();
             for column in 0..self.size.1 {
                 if row == 0 && column == 0 {
@@ -171,17 +171,25 @@ impl Board {
                     line1 += &self.theme.line_horizontal;
                 }
             }
-            // border of the last column
+            // outer border of the last column
             if row == 0 {
                 line1 += &self.theme.corner_top_right;
             } else {
                 line1 += &self.theme.edge_right;
             }
-            println!("{}\r", line1);
-            // content line
+            if (row == 0 && self.theme.outer_border_enabled)
+                || (row != 0 && self.theme.inner_border_row_enabled)
+            {
+                println!("{}\r", line1);
+            }
+            // content row
             let mut line2 = String::new();
             for column in 0..self.size.1 {
-                line2 += &self.theme.line_vertical;
+                if (column == 0 && self.theme.outer_border_enabled)
+                    || (column != 0 && self.theme.inner_border_column_enabled)
+                {
+                    line2 += &self.theme.line_vertical;
+                }
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;
                 }
@@ -190,10 +198,12 @@ impl Board {
                     line2 += &self.theme.cell_horizontal_padding;
                 }
             }
-            line2 += &self.theme.line_vertical;
+            if self.theme.outer_border_enabled {
+                line2 += &self.theme.line_vertical;
+            }
             println!("{}\r", line2);
         }
-        // border of the last row
+        // outer border of the last row
         let mut line3 = String::new();
         for column in 0..self.size.1 {
             if column == 0 {
@@ -208,7 +218,9 @@ impl Board {
             }
         }
         line3 += &self.theme.corner_bottom_right;
-        println!("{}\r", line3);
+        if self.theme.outer_border_enabled {
+            println!("{}\r", line3);
+        }
 
         println!("remaining flags: {}\r", self.remaining_flags);
 
@@ -236,51 +248,69 @@ impl Board {
         Ok(())
     }
 
-    fn convet_mouse_to_index(
+    // it is O(n), TODO: can be O(1) but may make themes complicated.
+    fn convert_mouse_to_index(
         &self,
         mouse_row: usize,
         mouse_column: usize,
     ) -> Option<(usize, usize)> {
-        let row: usize;
-        let column: usize;
+        let column: Option<usize> = {
+            let mut result: Option<usize> = None;
 
-        if self.theme.border_enabled {
-            if mouse_row % 2 == 0 {
-                return None;
+            let mut start_index: usize;
+            let mut end_index: usize = 0;
+            for test_column in 0..self.size.1 {
+                start_index = end_index;
+                if (test_column == 0 && self.theme.outer_border_enabled)
+                    || (test_column != 0 && self.theme.inner_border_column_enabled)
+                {
+                    start_index += 1;
+                    end_index += 1;
+                }
+                if self.theme.cell_horizontal_padding_enabled {
+                    end_index += 1;
+                }
+                end_index += 1;
+                if self.theme.cell_horizontal_padding_enabled {
+                    end_index += 1;
+                }
+                if start_index <= mouse_column && mouse_column < end_index {
+                    result = Some(test_column);
+                    break;
+                }
             }
-            row = ((mouse_row + 1) / 2) - 1;
+            result
+        };
 
-            if self.theme.cell_horizontal_padding_enabled {
-                if mouse_column % 4 == 0 {
-                    return None;
+        let row: Option<usize> = {
+            let mut result: Option<usize> = None;
+
+            let mut start_index: usize;
+            let mut end_index: usize = 0;
+            for test_row in 0..self.size.0 {
+                start_index = end_index;
+                if (test_row == 0 && self.theme.outer_border_enabled)
+                    || (test_row != 0 && self.theme.inner_border_row_enabled)
+                {
+                    start_index += 1;
+                    end_index += 1;
                 }
-                column = ((mouse_column + (4 - (mouse_column % 4))) / 4) - 1;
-            } else {
-                if mouse_column % 2 == 0 {
-                    return None;
+                end_index += 1;
+                if start_index <= mouse_row && mouse_row < end_index {
+                    result = Some(test_row);
+                    break;
                 }
-                column = ((mouse_column + 1) / 2) - 1;
             }
-        } else {
-            row = mouse_row;
-            if self.theme.cell_horizontal_padding_enabled {
-                if mouse_column % 2 == 0 {
-                    return None;
-                }
-                column = ((mouse_column + 1) / 2) - 1;
-            } else {
-                column = mouse_column;
+
+            result
+        };
+
+        if let Some(r) = row {
+            if let Some(c) = column {
+                return Some((r, c));
             }
         }
-
-        if row >= self.size.0 {
-            return None;
-        }
-        if column >= self.size.1 {
-            return None;
-        }
-
-        Some((row, column))
+        None
     }
 
     fn discover_cell(&mut self, (row, column): (usize, usize)) {
@@ -383,9 +413,9 @@ impl Board {
             "border_theme" => {
                 self.theme = dark_border_theme();
             }
-            // "dark_border_theme" => {
-            //     self.theme = borderless_theme();
-            // }
+            "dark_border_theme" => {
+                self.theme = borderless_theme();
+            }
             _ => {
                 self.theme = border_theme();
             }
@@ -395,28 +425,26 @@ impl Board {
 
 #[cfg(test)]
 mod tests {
-    use crate::theme::default_theme;
-
     use super::*;
 
     #[test]
     fn convet_mouse_to_index() {
-        let game_board = init_random_game((5, 10), 0.3, default_theme());
+        let game_board = init_random_game((5, 10), 0.3, border_theme());
 
-        assert_eq!(game_board.convet_mouse_to_index(0, 0), None);
-        assert_eq!(game_board.convet_mouse_to_index(0, 1), None);
-        assert_eq!(game_board.convet_mouse_to_index(0, 2), None);
-        assert_eq!(game_board.convet_mouse_to_index(0, 3), None);
-        assert_eq!(game_board.convet_mouse_to_index(0, 4), None);
+        assert_eq!(game_board.convert_mouse_to_index(0, 0), None);
+        assert_eq!(game_board.convert_mouse_to_index(0, 1), None);
+        assert_eq!(game_board.convert_mouse_to_index(0, 2), None);
+        assert_eq!(game_board.convert_mouse_to_index(0, 3), None);
+        assert_eq!(game_board.convert_mouse_to_index(0, 4), None);
 
-        assert_eq!(game_board.convet_mouse_to_index(1, 0), None);
-        assert_eq!(game_board.convet_mouse_to_index(1, 1), Some((0, 0)));
-        assert_eq!(game_board.convet_mouse_to_index(1, 2), Some((0, 0)));
-        assert_eq!(game_board.convet_mouse_to_index(1, 3), Some((0, 0)));
-        assert_eq!(game_board.convet_mouse_to_index(1, 4), None);
-        assert_eq!(game_board.convet_mouse_to_index(1, 5), Some((0, 1)));
-        assert_eq!(game_board.convet_mouse_to_index(1, 6), Some((0, 1)));
-        assert_eq!(game_board.convet_mouse_to_index(1, 7), Some((0, 1)));
-        assert_eq!(game_board.convet_mouse_to_index(1, 8), None);
+        assert_eq!(game_board.convert_mouse_to_index(1, 0), None);
+        assert_eq!(game_board.convert_mouse_to_index(1, 1), Some((0, 0)));
+        assert_eq!(game_board.convert_mouse_to_index(1, 2), Some((0, 0)));
+        assert_eq!(game_board.convert_mouse_to_index(1, 3), Some((0, 0)));
+        assert_eq!(game_board.convert_mouse_to_index(1, 4), None);
+        assert_eq!(game_board.convert_mouse_to_index(1, 5), Some((0, 1)));
+        assert_eq!(game_board.convert_mouse_to_index(1, 6), Some((0, 1)));
+        assert_eq!(game_board.convert_mouse_to_index(1, 7), Some((0, 1)));
+        assert_eq!(game_board.convert_mouse_to_index(1, 8), None);
     }
 }
