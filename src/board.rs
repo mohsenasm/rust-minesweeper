@@ -56,6 +56,7 @@ pub struct Board {
     pub cells: Vec<Vec<Cell>>,
     pub number_of_bombs: usize,
     pub remaining_flags: usize,
+    need_to_draw: bool,
 }
 
 pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme) -> Board {
@@ -65,6 +66,7 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
         cells: vec![vec![init_blank_cell(); size.1]; size.0],
         number_of_bombs: 0,
         remaining_flags: 0,
+        need_to_draw: true,
     };
 
     // generate bombs
@@ -157,7 +159,12 @@ impl Board {
         }
     }
 
-    pub fn draw(&self, mut stdout: &Stdout) -> Result<()> {
+    pub fn draw(&mut self, mut stdout: &Stdout) -> Result<()> {
+        if !self.need_to_draw {
+            return Ok(())
+        } else {
+            self.need_to_draw = false;
+        }
         // clear terminal
         queue!(stdout, Clear(ClearType::All))?;
         queue!(stdout, Clear(ClearType::Purge))?;
@@ -328,6 +335,7 @@ impl Board {
     fn discover_cell(&mut self, (row, column): (usize, usize)) {
         if !self.cells[row][column].is_discovered && !self.cells[row][column].is_flagged {
             self.cells[row][column].is_discovered = true;
+            self.need_to_draw = true;
             if self.cells[row][column].number_of_adjusted_bombs == 0 {
                 for index in self.get_adjusted_indices((row, column)) {
                     self.discover_cell(index)
@@ -338,6 +346,7 @@ impl Board {
 
     fn set_cell_flag(&mut self, (row, column): (usize, usize), flag: bool) {
         if self.cells[row][column].is_flagged != flag {
+            self.need_to_draw = true;
             // need to change
             if flag {
                 if self.remaining_flags > 0 {
@@ -423,6 +432,7 @@ impl Board {
     pub fn change_theme(&mut self) {
         if let Some(theme) = get_theme(&rotate_theme_name(&self.theme.name)) {
             self.theme = theme;
+            self.need_to_draw = true;
         }
     }
 }
