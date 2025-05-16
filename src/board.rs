@@ -56,7 +56,7 @@ pub struct Board {
     pub cells: Vec<Vec<Cell>>,
     pub number_of_bombs: usize,
     pub remaining_flags: usize,
-    pub selected_cell: (usize, usize),
+    pub selected_cell: Option<(usize, usize)>,
     need_to_draw: bool,
 }
 
@@ -67,7 +67,7 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
         cells: vec![vec![init_blank_cell(); size.1]; size.0],
         number_of_bombs: 0,
         remaining_flags: 0,
-        selected_cell: (0, 0),
+        selected_cell: None,
         need_to_draw: true,
     };
 
@@ -137,7 +137,7 @@ impl Board {
     pub fn mouse_hover(&mut self, mouse_row: usize, mouse_column: usize) {
         let index = self.convert_mouse_to_index(mouse_row, mouse_column);
         if let Some((row, column)) = index {
-            self.selected_cell = (row, column);
+            self.selected_cell = Some((row, column));
             self.need_to_draw = true;
         }
     }
@@ -171,24 +171,30 @@ impl Board {
     }
 
     pub fn move_selection(&mut self, dr: isize, dc: isize) {
-        let nr = (self.selected_cell.0 as isize + dr).clamp(0, self.size.0 as isize - 1) as usize;
-        let nc = (self.selected_cell.1 as isize + dc).clamp(0, self.size.1 as isize - 1) as usize;
-        self.selected_cell = (nr, nc);
-        self.need_to_draw = true;
+        if let Some((r, c)) = self.selected_cell {
+            let nr = (r as isize + dr).clamp(0, self.size.0 as isize - 1) as usize;
+            let nc = (c as isize + dc).clamp(0, self.size.1 as isize - 1) as usize;
+            self.selected_cell = Some((nr, nc));
+            self.need_to_draw = true;
+        } else {
+            self.selected_cell = Some((0, 0));
+        }
     }
 
     pub fn flag_selected(&mut self) {
-        let (r, c) = self.selected_cell;
-        if !self.cells[r][c].is_discovered {
-            let flag = !self.cells[r][c].is_flagged;
-            self.set_cell_flag((r, c), flag);
-            self.need_to_draw = true;
+        if let Some((r, c)) = self.selected_cell {
+            if !self.cells[r][c].is_discovered {
+                let flag = !self.cells[r][c].is_flagged;
+                self.set_cell_flag((r, c), flag);
+                self.need_to_draw = true;
+            }
         }
     }
 
     pub fn open_selected(&mut self) {
-        let (r, c) = self.selected_cell;
-        self.intract_with_cell(r, c, false);
+        if let Some((r, c)) = self.selected_cell {
+            self.intract_with_cell(r, c, false);
+        }
     }
 
     pub fn draw(&mut self, mut stdout: &Stdout) -> Result<()> {
@@ -207,10 +213,11 @@ impl Board {
             // outer/inner border row
             let mut line1 = String::new();
             for column in 0..self.size.1 {
-                let selected = (row, column) == self.selected_cell;
-                let selected_on_left = column > 0 && (row, column - 1) == self.selected_cell;
-                let selected_on_top = row > 0 && (row - 1, column) == self.selected_cell;
-                let selected_on_top_left = row > 0 && column > 0 && (row - 1, column - 1) == self.selected_cell;
+                let selected = Some((row, column)) == self.selected_cell;
+                let selected_on_left = column > 0 && Some((row, column - 1)) == self.selected_cell;
+                let selected_on_top = row > 0 && Some((row - 1, column)) == self.selected_cell;
+                let selected_on_top_left =
+                    row > 0 && column > 0 && Some((row - 1, column - 1)) == self.selected_cell;
                 if row == 0 && column == 0 {
                     line1 += &self.theme.format_corner_top_left(selected);
                 } else if row == 0 && column != 0 {
@@ -218,18 +225,26 @@ impl Board {
                 } else if row != 0 && column == 0 {
                     line1 += &self.theme.format_edge_left(selected || selected_on_top);
                 } else if row != 0 && column != 0 {
-                    line1 += &self.theme.format_cross(selected || selected_on_left || selected_on_top || selected_on_top_left);
+                    line1 += &self.theme.format_cross(
+                        selected || selected_on_left || selected_on_top || selected_on_top_left,
+                    );
                 }
                 // line (for space) + line (for content) + line (for space)
-                line1 += &self.theme.format_horizontal_border(selected || selected_on_top);
+                line1 += &self
+                    .theme
+                    .format_horizontal_border(selected || selected_on_top);
                 if self.theme.cell_horizontal_padding_enabled {
-                    line1 += &self.theme.format_horizontal_border(selected || selected_on_top);
-                    line1 += &self.theme.format_horizontal_border(selected || selected_on_top);
+                    line1 += &self
+                        .theme
+                        .format_horizontal_border(selected || selected_on_top);
+                    line1 += &self
+                        .theme
+                        .format_horizontal_border(selected || selected_on_top);
                 }
             }
             // outer border of the last column
-            let selected = (row, self.size.1 - 1) == self.selected_cell;
-            let selected_on_top = row > 0 && (row - 1, self.size.1 - 1) == self.selected_cell;
+            let selected = Some((row, self.size.1 - 1)) == self.selected_cell;
+            let selected_on_top = row > 0 && Some((row - 1, self.size.1 - 1)) == self.selected_cell;
             if row == 0 {
                 line1 += &self.theme.format_corner_top_right(selected);
             } else {
@@ -243,13 +258,15 @@ impl Board {
             // content row
             let mut line2 = String::new();
             for column in 0..self.size.1 {
-                let selected = (row, column) == self.selected_cell;
-                let selected_on_left = column > 0 && (row, column - 1) == self.selected_cell;
+                let selected = Some((row, column)) == self.selected_cell;
+                let selected_on_left = column > 0 && Some((row, column - 1)) == self.selected_cell;
 
                 if (column == 0 && self.theme.outer_border_enabled)
                     || (column != 0 && self.theme.inner_border_column_enabled)
                 {
-                    line2 += &self.theme.format_vertical_border(selected || selected_on_left);
+                    line2 += &self
+                        .theme
+                        .format_vertical_border(selected || selected_on_left);
                 }
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;
@@ -261,7 +278,7 @@ impl Board {
                 }
             }
             if self.theme.outer_border_enabled {
-                let sel = (row, self.size.1 - 1) == self.selected_cell;
+                let sel = Some((row, self.size.1 - 1)) == self.selected_cell;
                 line2 += &self.theme.format_vertical_border(sel);
             }
             println!("{}\r", line2);
@@ -270,8 +287,9 @@ impl Board {
         // outer border of the last row
         let mut line3 = String::new();
         for column in 0..self.size.1 {
-            let selected = (self.size.0 - 1, column) == self.selected_cell;
-            let selected_on_left = column > 0 && (self.size.0 - 1, column - 1) == self.selected_cell;
+            let selected = Some((self.size.0 - 1, column)) == self.selected_cell;
+            let selected_on_left =
+                column > 0 && Some((self.size.0 - 1, column - 1)) == self.selected_cell;
             if column == 0 {
                 line3 += &self.theme.format_corner_bottom_left(selected);
             } else {
@@ -284,7 +302,7 @@ impl Board {
                 line3 += &self.theme.format_horizontal_border(selected);
             }
         }
-        let selected = (self.size.0 - 1, self.size.1 - 1) == self.selected_cell;
+        let selected = Some((self.size.0 - 1, self.size.1 - 1)) == self.selected_cell;
         line3 += &self.theme.format_corner_bottom_right(selected);
         if self.theme.outer_border_enabled {
             println!("{}\r", line3);
