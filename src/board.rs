@@ -29,7 +29,7 @@ pub fn init_blank_cell() -> Cell {
 }
 
 impl Cell {
-    pub fn content_to_show(&self, theme: &Theme) -> String {
+    pub fn content_to_show(&self, theme: &Theme, selected: bool) -> String {
         if self.is_discovered {
             if self.is_bomb {
                 return theme.bomb.clone();
@@ -37,7 +37,7 @@ impl Cell {
                 if self.number_of_adjusted_bombs == 0 {
                     return theme.empty.clone();
                 } else {
-                    return theme.format_number_of_adjusted_bombs(self.number_of_adjusted_bombs);
+                    return theme.format_number_of_adjusted_bombs(self.number_of_adjusted_bombs, selected);
                 }
             }
         } else {
@@ -293,7 +293,7 @@ impl Board {
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;
                 }
-                let cell_content = self.cells[row][column].content_to_show(&self.theme);
+                let cell_content = self.cells[row][column].content_to_show(&self.theme, selected);
                 line2 += &self.theme.format_cell_content(&cell_content, selected);
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;

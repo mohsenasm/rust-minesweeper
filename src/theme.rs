@@ -28,6 +28,7 @@ pub struct Theme {
     pub unknown: String,
 
     pub colored_numbers: bool,
+    pub colored_numbers_on_selection: bool,
     pub highlight_corner_on_selection: bool,
 
     pub line_color: Option<Color>,
@@ -81,6 +82,7 @@ pub fn border_theme() -> Theme {
         unknown: '█'.to_string(),
 
         colored_numbers: false,
+        colored_numbers_on_selection: true,
         highlight_corner_on_selection: false,
         line_color: None,
     }
@@ -113,6 +115,7 @@ pub fn borderless_theme() -> Theme {
         unknown: '-'.to_string(),
 
         colored_numbers: false,
+        colored_numbers_on_selection: true,
         highlight_corner_on_selection: false,
         line_color: None,
     }
@@ -144,13 +147,20 @@ pub fn colored_borderless_theme() -> Theme {
     let mut t = borderless_theme();
     t.name = "colored_borderless".to_owned();
     t.colored_numbers = true;
+    t.colored_numbers_on_selection = false;
 
     t
 }
 
 impl Theme {
-    pub fn format_number_of_adjusted_bombs(&self, number_of_adjusted_bombs: u8) -> String {
-        if self.colored_numbers {
+    pub fn format_number_of_adjusted_bombs(
+        &self,
+        number_of_adjusted_bombs: u8,
+        selected: bool,
+    ) -> String {
+        let use_color = self.colored_numbers && (!selected || self.colored_numbers_on_selection);
+
+        if use_color {
             format!(
                 "{}{}{}",
                 (match number_of_adjusted_bombs {
@@ -214,19 +224,31 @@ impl Theme {
     }
 
     pub fn format_edge_top(&self, selected: bool) -> String {
-        self.format_border(&self.edge_top, self.highlight_corner_on_selection &&selected)
+        self.format_border(
+            &self.edge_top,
+            self.highlight_corner_on_selection && selected,
+        )
     }
 
     pub fn format_edge_bottom(&self, selected: bool) -> String {
-        self.format_border(&self.edge_bottom, self.highlight_corner_on_selection &&selected)
+        self.format_border(
+            &self.edge_bottom,
+            self.highlight_corner_on_selection && selected,
+        )
     }
 
     pub fn format_edge_left(&self, selected: bool) -> String {
-        self.format_border(&self.edge_left, self.highlight_corner_on_selection &&selected)
+        self.format_border(
+            &self.edge_left,
+            self.highlight_corner_on_selection && selected,
+        )
     }
 
     pub fn format_edge_right(&self, selected: bool) -> String {
-        self.format_border(&self.edge_right, self.highlight_corner_on_selection &&selected)
+        self.format_border(
+            &self.edge_right,
+            self.highlight_corner_on_selection && selected,
+        )
     }
 
     fn format_border(&self, symbol: &str, selected: bool) -> String {
