@@ -28,6 +28,7 @@ pub struct Theme {
     pub unknown: String,
 
     pub colored_numbers: bool,
+    pub highlight_corner_on_selection: bool,
 
     pub line_color: Option<Color>,
 }
@@ -80,6 +81,7 @@ pub fn border_theme() -> Theme {
         unknown: '█'.to_string(),
 
         colored_numbers: false,
+        highlight_corner_on_selection: false,
         line_color: None,
     }
 }
@@ -111,6 +113,7 @@ pub fn borderless_theme() -> Theme {
         unknown: '-'.to_string(),
 
         colored_numbers: false,
+        highlight_corner_on_selection: false,
         line_color: None,
     }
 }
@@ -176,39 +179,54 @@ impl Theme {
     }
 
     pub fn format_cross(&self, selected: bool) -> String {
-        self.format_border(&self.line_cross, selected)
+        self.format_border(
+            &self.line_cross,
+            self.highlight_corner_on_selection && selected,
+        )
     }
 
     pub fn format_corner_top_left(&self, selected: bool) -> String {
-        self.format_border(&self.corner_top_left, selected)
+        self.format_border(
+            &self.corner_top_left,
+            self.highlight_corner_on_selection && selected,
+        )
     }
 
     pub fn format_corner_top_right(&self, selected: bool) -> String {
-        self.format_border(&self.corner_top_right, selected)
+        self.format_border(
+            &self.corner_top_right,
+            self.highlight_corner_on_selection && selected,
+        )
     }
 
     pub fn format_corner_bottom_left(&self, selected: bool) -> String {
-        self.format_border(&self.corner_bottom_left, selected)
+        self.format_border(
+            &self.corner_bottom_left,
+            self.highlight_corner_on_selection && selected,
+        )
     }
 
     pub fn format_corner_bottom_right(&self, selected: bool) -> String {
-        self.format_border(&self.corner_bottom_right, selected)
+        self.format_border(
+            &self.corner_bottom_right,
+            self.highlight_corner_on_selection && selected,
+        )
     }
 
     pub fn format_edge_top(&self, selected: bool) -> String {
-        self.format_border(&self.edge_top, selected)
+        self.format_border(&self.edge_top, self.highlight_corner_on_selection &&selected)
     }
 
     pub fn format_edge_bottom(&self, selected: bool) -> String {
-        self.format_border(&self.edge_bottom, selected)
+        self.format_border(&self.edge_bottom, self.highlight_corner_on_selection &&selected)
     }
 
     pub fn format_edge_left(&self, selected: bool) -> String {
-        self.format_border(&self.edge_left, selected)
+        self.format_border(&self.edge_left, self.highlight_corner_on_selection &&selected)
     }
 
     pub fn format_edge_right(&self, selected: bool) -> String {
-        self.format_border(&self.edge_right, selected)
+        self.format_border(&self.edge_right, self.highlight_corner_on_selection &&selected)
     }
 
     fn format_border(&self, symbol: &str, selected: bool) -> String {
@@ -220,12 +238,7 @@ impl Theme {
                 ResetColor
             )
         } else if let Some(color) = self.line_color {
-            format!(
-                "{}{}{}",
-                SetForegroundColor(color),
-                symbol,
-                ResetColor
-            )
+            format!("{}{}{}", SetForegroundColor(color), symbol, ResetColor)
         } else {
             symbol.to_string()
         }
