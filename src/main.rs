@@ -91,6 +91,17 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
             if key_event == H_KEY {
                 game_board.hint();
             }
+
+            // Keyboard navigation
+            match key_event.code {
+                KeyCode::Up => game_board.move_selection(-1, 0),
+                KeyCode::Down => game_board.move_selection(1, 0),
+                KeyCode::Left => game_board.move_selection(0, -1),
+                KeyCode::Right => game_board.move_selection(0, 1),
+                KeyCode::Char('f') | KeyCode::Char('F') => game_board.flag_selected(),
+                KeyCode::Enter | KeyCode::Char(' ') => game_board.open_selected(),
+                _ => {}
+            }
         }
 
         if let Err(e) = game_board.draw(&stdout) {

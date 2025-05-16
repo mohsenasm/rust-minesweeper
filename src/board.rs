@@ -56,6 +56,7 @@ pub struct Board {
     pub cells: Vec<Vec<Cell>>,
     pub number_of_bombs: usize,
     pub remaining_flags: usize,
+    pub selected_cell: (usize, usize),
     need_to_draw: bool,
 }
 
@@ -66,6 +67,7 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
         cells: vec![vec![init_blank_cell(); size.1]; size.0],
         number_of_bombs: 0,
         remaining_flags: 0,
+        selected_cell: (0, 0),
         need_to_draw: true,
     };
 
@@ -132,36 +134,66 @@ impl Board {
         }
     }
 
-    pub fn mouse_hover(&mut self, _row: usize, _column: usize) {
-        // TODO: change color of the pointing cell
+    pub fn mouse_hover(&mut self, mouse_row: usize, mouse_column: usize) {
+        let index = self.convert_mouse_to_index(mouse_row, mouse_column);
+        if let Some((row, column)) = index {
+            self.selected_cell = (row, column);
+            self.need_to_draw = true;
+        }
     }
 
     pub fn mouse_down(&mut self, mouse_row: usize, mouse_column: usize, left_key: bool) {
         let index = self.convert_mouse_to_index(mouse_row, mouse_column);
         if let Some((row, column)) = index {
-            if self.cells[row][column].is_discovered {
-                // fill flags for adjusted cells, if possible
-                self.discover_or_flag_adjusted_cells((row, column));
-            } else {
-                // discover cell
-                if left_key {
-                    if self.cells[row][column].is_flagged {
-                        self.set_cell_flag((row, column), false);
-                    } else {
-                        self.discover_cell((row, column));
-                    }
+            self.intract_with_cell(row, column, !left_key);
+        }
+    }
+
+    pub fn intract_with_cell(&mut self, row: usize, column: usize, alternate_key: bool) {
+        if self.cells[row][column].is_discovered {
+            // fill flags for adjusted cells, if possible
+            self.discover_or_flag_adjusted_cells((row, column));
+        } else {
+            if !alternate_key {
+                // discover or undo flag
+                if self.cells[row][column].is_flagged {
+                    self.set_cell_flag((row, column), false);
                 } else {
-                    if !self.cells[row][column].is_flagged {
-                        self.set_cell_flag((row, column), true);
-                    }
+                    self.discover_cell((row, column));
+                }
+            } else {
+                // flag cell
+                if !self.cells[row][column].is_flagged {
+                    self.set_cell_flag((row, column), true);
                 }
             }
         }
     }
 
+    pub fn move_selection(&mut self, dr: isize, dc: isize) {
+        let nr = (self.selected_cell.0 as isize + dr).clamp(0, self.size.0 as isize - 1) as usize;
+        let nc = (self.selected_cell.1 as isize + dc).clamp(0, self.size.1 as isize - 1) as usize;
+        self.selected_cell = (nr, nc);
+        self.need_to_draw = true;
+    }
+
+    pub fn flag_selected(&mut self) {
+        let (r, c) = self.selected_cell;
+        if !self.cells[r][c].is_discovered {
+            let flag = !self.cells[r][c].is_flagged;
+            self.set_cell_flag((r, c), flag);
+            self.need_to_draw = true;
+        }
+    }
+
+    pub fn open_selected(&mut self) {
+        let (r, c) = self.selected_cell;
+        self.intract_with_cell(r, c, false);
+    }
+
     pub fn draw(&mut self, mut stdout: &Stdout) -> Result<()> {
         if !self.need_to_draw {
-            return Ok(())
+            return Ok(());
         } else {
             self.need_to_draw = false;
         }
@@ -212,7 +244,14 @@ impl Board {
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;
                 }
-                line2 += &self.cells[row][column].content_to_show(&self.theme);
+                if (row, column) == self.selected_cell {
+                    line2 += &format!(
+                        "\x1b[33m{}\x1b[0m",
+                        self.cells[row][column].content_to_show(&self.theme)
+                    );
+                } else {
+                    line2 += &self.cells[row][column].content_to_show(&self.theme);
+                }
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;
                 }
