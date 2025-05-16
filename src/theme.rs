@@ -37,9 +37,10 @@ pub fn get_theme(theme_name: &String) -> Option<Theme> {
         "dark_border" => Some(dark_border_theme()),
         "colored_borderless" => Some(colored_borderless_theme()),
         "borderless" => Some(borderless_theme()),
-        _ => None
+        _ => None,
     }
 }
+
 pub fn rotate_theme_name(theme_name: &String) -> String {
     match theme_name.as_str() {
         "colored" => "border".to_owned(),
@@ -111,22 +112,20 @@ pub fn borderless_theme() -> Theme {
 }
 
 pub fn dark_border_theme() -> Theme {
-    let foreground: String = SetForegroundColor(Color::DarkGrey).to_string();
-    let background: String = SetBackgroundColor(Color::Grey).to_string();
     let reset_color = ResetColor.to_string();
 
     let mut t = border_theme();
     t.name = "dark_border".to_owned();
-    t.add_color_before_lines(&foreground);
-    t.add_color_after_lines(&reset_color);
-
-    t.bomb = format!(
-        "{}{}{}",
-        background, t.bomb, reset_color
+    t.color_lines(
+        &SetForegroundColor(Color::DarkGrey).to_string(),
+        &reset_color,
     );
+
     t.flag = format!(
         "{}{}{}",
-        background, t.flag, reset_color
+        &SetBackgroundColor(Color::DarkGrey).to_string(),
+        t.flag,
+        reset_color
     );
 
     t
@@ -149,32 +148,18 @@ pub fn colored_borderless_theme() -> Theme {
 }
 
 impl Theme {
-    pub fn add_color_before_lines(&mut self, color: &String) {
-        self.line_horizontal = format!("{}{}", color, self.line_horizontal);
-        self.line_vertical = format!("{}{}", color, self.line_vertical);
-        self.line_cross = format!("{}{}", color, self.line_cross);
-        self.corner_top_left = format!("{}{}", color, self.corner_top_left);
-        self.corner_top_right = format!("{}{}", color, self.corner_top_right);
-        self.corner_bottom_left = format!("{}{}", color, self.corner_bottom_left);
-        self.corner_bottom_right = format!("{}{}", color, self.corner_bottom_right);
-        self.edge_top = format!("{}{}", color, self.edge_top);
-        self.edge_bottom = format!("{}{}", color, self.edge_bottom);
-        self.edge_left = format!("{}{}", color, self.edge_left);
-        self.edge_right = format!("{}{}", color, self.edge_right);
-    }
-
-    pub fn add_color_after_lines(&mut self, color: &String) {
-        self.line_horizontal = format!("{}{}", self.line_horizontal, color);
-        self.line_vertical = format!("{}{}", self.line_vertical, color);
-        self.line_cross = format!("{}{}", self.line_cross, color);
-        self.corner_top_left = format!("{}{}", self.corner_top_left, color);
-        self.corner_top_right = format!("{}{}", self.corner_top_right, color);
-        self.corner_bottom_left = format!("{}{}", self.corner_bottom_left, color);
-        self.corner_bottom_right = format!("{}{}", self.corner_bottom_right, color);
-        self.edge_top = format!("{}{}", self.edge_top, color);
-        self.edge_bottom = format!("{}{}", self.edge_bottom, color);
-        self.edge_left = format!("{}{}", self.edge_left, color);
-        self.edge_right = format!("{}{}", self.edge_right, color);
+    pub fn color_lines(&mut self, color: &String, reset_color: &String) {
+        self.line_horizontal = format!("{}{}{}", color, self.line_horizontal, reset_color);
+        self.line_vertical = format!("{}{}{}", color, self.line_vertical, reset_color);
+        self.line_cross = format!("{}{}{}", color, self.line_cross, reset_color);
+        self.corner_top_left = format!("{}{}{}", color, self.corner_top_left, reset_color);
+        self.corner_top_right = format!("{}{}{}", color, self.corner_top_right, reset_color);
+        self.corner_bottom_left = format!("{}{}{}", color, self.corner_bottom_left, reset_color);
+        self.corner_bottom_right = format!("{}{}{}", color, self.corner_bottom_right, reset_color);
+        self.edge_top = format!("{}{}{}", color, self.edge_top, reset_color);
+        self.edge_bottom = format!("{}{}{}", color, self.edge_bottom, reset_color);
+        self.edge_left = format!("{}{}{}", color, self.edge_left, reset_color);
+        self.edge_right = format!("{}{}{}", color, self.edge_right, reset_color);
     }
 
     pub fn format_number_of_adjusted_bombs(&self, number_of_adjusted_bombs: u8) -> String {
@@ -187,8 +172,10 @@ impl Theme {
                     3 => SetForegroundColor(Color::Red).to_string(),
                     4 => SetForegroundColor(Color::DarkBlue).to_string(),
                     5 => SetForegroundColor(Color::DarkRed).to_string(),
-                    _ => SetForegroundColor(Color::DarkMagenta).to_string()
-                }), number_of_adjusted_bombs.to_string(), ResetColor.to_string()
+                    _ => SetForegroundColor(Color::DarkMagenta).to_string(),
+                }),
+                number_of_adjusted_bombs.to_string(),
+                ResetColor.to_string()
             )
         } else {
             number_of_adjusted_bombs.to_string()
