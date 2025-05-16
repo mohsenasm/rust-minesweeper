@@ -170,14 +170,36 @@ impl Board {
         }
     }
 
+    // move at direction specified with dr and dc while skipping the blank cells
     pub fn move_selection(&mut self, dr: isize, dc: isize) {
-        if let Some((r, c)) = self.selected_cell {
-            let nr = (r as isize + dr).clamp(0, self.size.0 as isize - 1) as usize;
-            let nc = (c as isize + dc).clamp(0, self.size.1 as isize - 1) as usize;
-            self.selected_cell = Some((nr, nc));
-            self.need_to_draw = true;
+        let mut next = if let Some((r, c)) = self.selected_cell {
+            (r as isize, c as isize)
         } else {
-            self.selected_cell = Some((0, 0));
+            (0, 0)
+        };
+
+        loop {
+            next.0 = next.0 + dr;
+            next.1 = next.1 + dc;
+
+            // If out of bounds, stop
+            if next.0 < 0
+                || next.1 < 0
+                || next.0 >= self.size.0 as isize
+                || next.1 >= self.size.1 as isize
+            {
+                break;
+            }
+
+            let cell = &self.cells[next.0 as usize][next.1 as usize];
+
+            if cell.is_discovered && cell.number_of_adjusted_bombs == 0 {
+                continue;
+            } else {
+                self.selected_cell = Some((next.0 as usize, next.1 as usize));
+                self.need_to_draw = true;
+                break;
+            }
         }
     }
 
