@@ -168,22 +168,66 @@ impl Theme {
 
     // Returns a colored vertical border string, using yellow if selected, otherwise theme color
     pub fn format_vertical_border(&self, selected: bool) -> String {
+        self.format_border(&self.line_vertical, selected)
+    }
+
+    pub fn format_horizontal_border(&self, selected: bool) -> String {
+        self.format_border(&self.line_horizontal, selected)
+    }
+
+    pub fn format_cross(&self, selected: bool) -> String {
+        self.format_border(&self.line_cross, selected)
+    }
+
+    pub fn format_corner_top_left(&self, selected: bool) -> String {
+        self.format_border(&self.corner_top_left, selected)
+    }
+
+    pub fn format_corner_top_right(&self, selected: bool) -> String {
+        self.format_border(&self.corner_top_right, selected)
+    }
+
+    pub fn format_corner_bottom_left(&self, selected: bool) -> String {
+        self.format_border(&self.corner_bottom_left, selected)
+    }
+
+    pub fn format_corner_bottom_right(&self, selected: bool) -> String {
+        self.format_border(&self.corner_bottom_right, selected)
+    }
+
+    pub fn format_edge_top(&self, selected: bool) -> String {
+        self.format_border(&self.edge_top, selected)
+    }
+
+    pub fn format_edge_bottom(&self, selected: bool) -> String {
+        self.format_border(&self.edge_bottom, selected)
+    }
+
+    pub fn format_edge_left(&self, selected: bool) -> String {
+        self.format_border(&self.edge_left, selected)
+    }
+
+    pub fn format_edge_right(&self, selected: bool) -> String {
+        self.format_border(&self.edge_right, selected)
+    }
+
+    fn format_border(&self, symbol: &str, selected: bool) -> String {
         if selected {
             format!(
                 "{}{}{}",
                 SetForegroundColor(Color::Yellow),
-                self.line_vertical,
+                symbol,
                 ResetColor
             )
         } else if let Some(color) = self.line_color {
             format!(
                 "{}{}{}",
                 SetForegroundColor(color),
-                self.line_vertical,
+                symbol,
                 ResetColor
             )
         } else {
-            self.line_vertical.clone()
+            symbol.to_string()
         }
     }
 

@@ -203,30 +203,37 @@ impl Board {
         queue!(stdout, MoveTo(0, 0))?;
 
         for row in 0..self.size.0 {
-            // each row has two rows, one for border and one for the content
+            // each row has two parts, one for border and one for the content
             // outer/inner border row
             let mut line1 = String::new();
             for column in 0..self.size.1 {
+                let selected = (row, column) == self.selected_cell;
+                let selected_on_left = column > 0 && (row, column - 1) == self.selected_cell;
+                let selected_on_top = row > 0 && (row - 1, column) == self.selected_cell;
+                let selected_on_top_left = row > 0 && column > 0 && (row - 1, column - 1) == self.selected_cell;
                 if row == 0 && column == 0 {
-                    line1 += &self.theme.corner_top_left;
+                    line1 += &self.theme.format_corner_top_left(selected);
                 } else if row == 0 && column != 0 {
-                    line1 += &self.theme.edge_top;
+                    line1 += &self.theme.format_edge_top(selected || selected_on_left);
                 } else if row != 0 && column == 0 {
-                    line1 += &self.theme.edge_left;
+                    line1 += &self.theme.format_edge_left(selected || selected_on_top);
                 } else if row != 0 && column != 0 {
-                    line1 += &self.theme.line_cross;
+                    line1 += &self.theme.format_cross(selected || selected_on_left || selected_on_top || selected_on_top_left);
                 }
-                line1 += &self.theme.line_horizontal;
+                // line (for space) + line (for content) + line (for space)
+                line1 += &self.theme.format_horizontal_border(selected || selected_on_top);
                 if self.theme.cell_horizontal_padding_enabled {
-                    line1 += &self.theme.line_horizontal;
-                    line1 += &self.theme.line_horizontal;
+                    line1 += &self.theme.format_horizontal_border(selected || selected_on_top);
+                    line1 += &self.theme.format_horizontal_border(selected || selected_on_top);
                 }
             }
             // outer border of the last column
+            let selected = (row, self.size.1 - 1) == self.selected_cell;
+            let selected_on_top = row > 0 && (row - 1, self.size.1 - 1) == self.selected_cell;
             if row == 0 {
-                line1 += &self.theme.corner_top_right;
+                line1 += &self.theme.format_corner_top_right(selected);
             } else {
-                line1 += &self.theme.edge_right;
+                line1 += &self.theme.format_edge_right(selected || selected_on_top);
             }
             if (row == 0 && self.theme.outer_border_enabled)
                 || (row != 0 && self.theme.inner_border_row_enabled)
@@ -236,47 +243,49 @@ impl Board {
             // content row
             let mut line2 = String::new();
             for column in 0..self.size.1 {
+                let selected = (row, column) == self.selected_cell;
+                let selected_on_left = column > 0 && (row, column - 1) == self.selected_cell;
+
                 if (column == 0 && self.theme.outer_border_enabled)
                     || (column != 0 && self.theme.inner_border_column_enabled)
                 {
-                    line2 += &self.theme.format_vertical_border(
-                        (row, column) == self.selected_cell
-                            || (column > 0 && (row, column - 1) == self.selected_cell),
-                    );
+                    line2 += &self.theme.format_vertical_border(selected || selected_on_left);
                 }
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;
                 }
                 let cell_content = self.cells[row][column].content_to_show(&self.theme);
-                line2 += &self
-                    .theme
-                    .format_cell_content(&cell_content, (row, column) == self.selected_cell);
+                line2 += &self.theme.format_cell_content(&cell_content, selected);
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;
                 }
             }
             if self.theme.outer_border_enabled {
-                line2 += &self
-                    .theme
-                    .format_vertical_border((row, self.size.1 - 1) == self.selected_cell);
+                let sel = (row, self.size.1 - 1) == self.selected_cell;
+                line2 += &self.theme.format_vertical_border(sel);
             }
             println!("{}\r", line2);
         }
+
         // outer border of the last row
         let mut line3 = String::new();
         for column in 0..self.size.1 {
+            let selected = (self.size.0 - 1, column) == self.selected_cell;
+            let selected_on_left = column > 0 && (self.size.0 - 1, column - 1) == self.selected_cell;
             if column == 0 {
-                line3 += &self.theme.corner_bottom_left;
+                line3 += &self.theme.format_corner_bottom_left(selected);
             } else {
-                line3 += &self.theme.edge_bottom;
+                line3 += &self.theme.format_edge_bottom(selected || selected_on_left);
             }
-            line3 += &self.theme.line_horizontal;
+            // line (for space) + line (for content) + line (for space)
+            line3 += &self.theme.format_horizontal_border(selected);
             if self.theme.cell_horizontal_padding_enabled {
-                line3 += &self.theme.line_horizontal;
-                line3 += &self.theme.line_horizontal;
+                line3 += &self.theme.format_horizontal_border(selected);
+                line3 += &self.theme.format_horizontal_border(selected);
             }
         }
-        line3 += &self.theme.corner_bottom_right;
+        let selected = (self.size.0 - 1, self.size.1 - 1) == self.selected_cell;
+        line3 += &self.theme.format_corner_bottom_right(selected);
         if self.theme.outer_border_enabled {
             println!("{}\r", line3);
         }
