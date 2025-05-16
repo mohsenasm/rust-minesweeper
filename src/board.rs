@@ -239,25 +239,26 @@ impl Board {
                 if (column == 0 && self.theme.outer_border_enabled)
                     || (column != 0 && self.theme.inner_border_column_enabled)
                 {
-                    line2 += &self.theme.line_vertical;
+                    line2 += &self.theme.format_vertical_border(
+                        (row, column) == self.selected_cell
+                            || (column > 0 && (row, column - 1) == self.selected_cell),
+                    );
                 }
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;
                 }
-                if (row, column) == self.selected_cell {
-                    line2 += &format!(
-                        "\x1b[33m{}\x1b[0m",
-                        self.cells[row][column].content_to_show(&self.theme)
-                    );
-                } else {
-                    line2 += &self.cells[row][column].content_to_show(&self.theme);
-                }
+                let cell_content = self.cells[row][column].content_to_show(&self.theme);
+                line2 += &self
+                    .theme
+                    .format_cell_content(&cell_content, (row, column) == self.selected_cell);
                 if self.theme.cell_horizontal_padding_enabled {
                     line2 += &self.theme.cell_horizontal_padding;
                 }
             }
             if self.theme.outer_border_enabled {
-                line2 += &self.theme.line_vertical;
+                line2 += &self
+                    .theme
+                    .format_vertical_border((row, self.size.1 - 1) == self.selected_cell);
             }
             println!("{}\r", line2);
         }

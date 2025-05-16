@@ -1,4 +1,4 @@
-use crossterm::style::{Color, ResetColor, SetBackgroundColor, SetForegroundColor};
+use crossterm::style::{Color, ResetColor, SetForegroundColor};
 
 #[derive(PartialEq)]
 pub struct Theme {
@@ -28,6 +28,8 @@ pub struct Theme {
     pub unknown: String,
 
     pub colored_numbers: bool,
+
+    pub line_color: Option<Color>,
 }
 
 pub fn get_theme(theme_name: &String) -> Option<Theme> {
@@ -78,6 +80,7 @@ pub fn border_theme() -> Theme {
         unknown: '█'.to_string(),
 
         colored_numbers: false,
+        line_color: None,
     }
 }
 
@@ -108,24 +111,19 @@ pub fn borderless_theme() -> Theme {
         unknown: '-'.to_string(),
 
         colored_numbers: false,
+        line_color: None,
     }
 }
 
 pub fn dark_border_theme() -> Theme {
-    let reset_color = ResetColor.to_string();
-
     let mut t = border_theme();
     t.name = "dark_border".to_owned();
-    t.color_lines(
-        &SetForegroundColor(Color::DarkGrey).to_string(),
-        &reset_color,
-    );
-
+    t.line_color = Some(Color::DarkGrey);
     t.flag = format!(
         "{}{}{}",
-        &SetBackgroundColor(Color::DarkGrey).to_string(),
+        crossterm::style::SetBackgroundColor(Color::DarkGrey).to_string(),
         t.flag,
-        reset_color
+        crossterm::style::ResetColor.to_string()
     );
 
     t
@@ -148,20 +146,6 @@ pub fn colored_borderless_theme() -> Theme {
 }
 
 impl Theme {
-    pub fn color_lines(&mut self, color: &String, reset_color: &String) {
-        self.line_horizontal = format!("{}{}{}", color, self.line_horizontal, reset_color);
-        self.line_vertical = format!("{}{}{}", color, self.line_vertical, reset_color);
-        self.line_cross = format!("{}{}{}", color, self.line_cross, reset_color);
-        self.corner_top_left = format!("{}{}{}", color, self.corner_top_left, reset_color);
-        self.corner_top_right = format!("{}{}{}", color, self.corner_top_right, reset_color);
-        self.corner_bottom_left = format!("{}{}{}", color, self.corner_bottom_left, reset_color);
-        self.corner_bottom_right = format!("{}{}{}", color, self.corner_bottom_right, reset_color);
-        self.edge_top = format!("{}{}{}", color, self.edge_top, reset_color);
-        self.edge_bottom = format!("{}{}{}", color, self.edge_bottom, reset_color);
-        self.edge_left = format!("{}{}{}", color, self.edge_left, reset_color);
-        self.edge_right = format!("{}{}{}", color, self.edge_right, reset_color);
-    }
-
     pub fn format_number_of_adjusted_bombs(&self, number_of_adjusted_bombs: u8) -> String {
         if self.colored_numbers {
             format!(
@@ -179,6 +163,41 @@ impl Theme {
             )
         } else {
             number_of_adjusted_bombs.to_string()
+        }
+    }
+
+    // Returns a colored vertical border string, using yellow if selected, otherwise theme color
+    pub fn format_vertical_border(&self, selected: bool) -> String {
+        if selected {
+            format!(
+                "{}{}{}",
+                SetForegroundColor(Color::Yellow),
+                self.line_vertical,
+                ResetColor
+            )
+        } else if let Some(color) = self.line_color {
+            format!(
+                "{}{}{}",
+                SetForegroundColor(color),
+                self.line_vertical,
+                ResetColor
+            )
+        } else {
+            self.line_vertical.clone()
+        }
+    }
+
+    // Returns a colored cell content string, using yellow if selected, otherwise normal
+    pub fn format_cell_content(&self, content: &str, selected: bool) -> String {
+        if selected {
+            format!(
+                "{}{}{}",
+                SetForegroundColor(Color::Yellow),
+                content,
+                ResetColor
+            )
+        } else {
+            content.to_string()
         }
     }
 }
