@@ -37,7 +37,8 @@ impl Cell {
                 if self.number_of_adjusted_bombs == 0 {
                     return theme.empty.clone();
                 } else {
-                    return theme.format_number_of_adjusted_bombs(self.number_of_adjusted_bombs, selected);
+                    return theme
+                        .format_number_of_adjusted_bombs(self.number_of_adjusted_bombs, selected);
                 }
             }
         } else {
@@ -137,8 +138,10 @@ impl Board {
     pub fn mouse_hover(&mut self, mouse_row: usize, mouse_column: usize) {
         let index = self.convert_mouse_to_index(mouse_row, mouse_column);
         if let Some((row, column)) = index {
-            self.selected_cell = Some((row, column));
-            self.need_to_draw = true;
+            if self.selected_cell != Some((row, column)) {
+                self.selected_cell = Some((row, column));
+                self.need_to_draw = true;
+            }
         }
     }
 
