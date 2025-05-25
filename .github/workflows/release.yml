@@ -1,0 +1,29 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Build release binary
+        run: cargo build --release
+      - name: Prepare binary archive
+        run: |
+          cd target/release
+          tar -czvf minesweeper-macos.tar.gz minesweeper
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/release/minesweeper-macos.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
