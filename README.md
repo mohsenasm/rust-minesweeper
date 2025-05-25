@@ -23,7 +23,7 @@ cargo build --release
 
 ## Usage
 ```
-Usage: rust-minesweeper [OPTIONS]
+Usage: minesweeper [OPTIONS]
 
 Options:
   -s, --size <SIZE>
