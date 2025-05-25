@@ -10,6 +10,17 @@ Tab, T                       | Change theme
 H                            | Show a hint
 Ctrl+C, Q, Esc               | Exit the game
 
+## Install
+To install on macOS:
+```
+brew install mohsenasm/rust-minesweeper/rust-minesweeper
+```
+For other platforms build from source:
+```
+cargo build --release
+./target/release/minesweeper
+```
+
 ## Usage
 ```
 Usage: rust-minesweeper [OPTIONS]
