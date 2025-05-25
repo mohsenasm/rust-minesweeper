@@ -114,8 +114,8 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
 #[derive(Parser)]
 #[command(
     version,
-    about = "A command-line minesweeper game with mouse support.",
-    long_about = "A command-line minesweeper game with mouse support.
+    about = "Command-line minesweeper game with mouse support.",
+    long_about = "Command-line minesweeper game with mouse support.
 See https://github.com/mohsenasm/rust-minesweeper
 
 Key                          | Action

@@ -1,5 +1,5 @@
 # rust-minesweeper
-A command-line minesweeper game with mouse support.
+Command-line minesweeper game with mouse support.
 
 Key                          | Action
 ---------------------------- | -----------
