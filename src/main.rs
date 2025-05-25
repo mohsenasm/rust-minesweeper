@@ -112,8 +112,22 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
 }
 
 #[derive(Parser)]
-#[command(version, about = "A command-line minesweeper game with mouse support. 
-Press 'Tab' to change the theme and 'h' to get a hint.", long_about = None)]
+#[command(
+    version,
+    about = "A command-line minesweeper game with mouse support.",
+    long_about = "A command-line minesweeper game with mouse support.
+See https://github.com/mohsenasm/rust-minesweeper
+
+Key                          | Action
+---------------------------- | -----------
+Mouse, Arrow keys            | Navigate the board
+Left Click, Enter, Space     | Open the selected cell
+Right Click, Middle Click, F | Flag the selected cell
+Tab, T                       | Change theme
+H                            | Show a hint
+Ctrl+C, Q, Esc               | Exit the game
+"
+)]
 struct Args {
     /// The board size
     #[arg(short, long, default_value = "12x8")]

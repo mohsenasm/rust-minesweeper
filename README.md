@@ -1,7 +1,14 @@
 # rust-minesweeper
 A command-line minesweeper game with mouse support.
 
-Press 'Tab' to change the theme and 'h' to get a hint.
+Key                          | Action
+---------------------------- | -----------
+Mouse, Arrow keys            | Navigate the board
+Left Click, Enter, Space     | Open the selected cell
+Right Click, Middle Click, F | Flag the selected cell
+Tab, T                       | Change theme
+H                            | Show a hint
+Ctrl+C, Q, Esc               | Exit the game
 
 ## Usage
 ```

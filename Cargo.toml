@@ -1,6 +1,6 @@
 [package]
-name = "rust-minesweeper"
-version = "0.1.1"
+name = "minesweeper"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
