@@ -7,23 +7,52 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            archive: minesweeper-macos-intel.tar.gz
+            binary: minesweeper
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            archive: minesweeper-macos-arm.tar.gz
+            binary: minesweeper
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            archive: minesweeper-linux-amd64.tar.gz
+            binary: minesweeper
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            archive: minesweeper-linux-arm64.tar.gz
+            binary: minesweeper
+
     steps:
       - uses: actions/checkout@v4
-      - name: Install Rust
+
+      - name: Install Rust target
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: ${{ matrix.target }}
           override: true
+
+      - name: Install cross dependencies (Linux ARM only)
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
       - name: Build release binary
-        run: cargo build --release
+        run: cargo build --release --target ${{ matrix.target }}
+
       - name: Prepare binary archive
         run: |
-          cd target/release
-          tar -czvf minesweeper-macos.tar.gz minesweeper
+          cd target/${{ matrix.target }}/release
+          tar -czvf ${{ matrix.archive }} ${{ matrix.binary }}
+
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
-          files: target/release/minesweeper-macos.tar.gz
+          files: target/${{ matrix.target }}/release/${{ matrix.archive }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
