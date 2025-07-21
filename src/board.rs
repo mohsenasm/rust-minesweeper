@@ -1,4 +1,5 @@
 use std::io::{Error, ErrorKind, Result, Stdout};
+use std::time::Duration;
 
 use crossterm::{
     cursor::MoveTo,
@@ -57,8 +58,12 @@ pub struct Board {
     pub cells: Vec<Vec<Cell>>,
     pub number_of_bombs: usize,
     pub remaining_flags: usize,
-    pub selected_cell: Option<(usize, usize)>,
+    selected_cell: Option<(usize, usize)>,
     need_to_draw: bool,
+    pub delay_before_draw: Option<Duration>,
+    pub game_ended: bool,
+    game_end_animation_step: usize,
+    highlighted_cell: Vec<(usize, usize)>,
 }
 
 pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme) -> Board {
@@ -70,6 +75,10 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
         remaining_flags: 0,
         selected_cell: None,
         need_to_draw: true,
+        delay_before_draw: None,
+        game_ended: false,
+        game_end_animation_step: 0,
+        highlighted_cell: Vec::new(),
     };
 
     // generate bombs
@@ -222,6 +231,10 @@ impl Board {
         }
     }
 
+    fn is_cell_highlighted(&self, cell: &(usize, usize)) -> bool {
+        (self.selected_cell == Some(*cell)) || self.highlighted_cell.contains(cell)
+    }
+
     pub fn draw(&mut self, mut stdout: &Stdout) -> Result<()> {
         if !self.need_to_draw {
             return Ok(());
@@ -238,11 +251,11 @@ impl Board {
             // outer/inner border row
             let mut line1 = String::new();
             for column in 0..self.size.1 {
-                let selected = Some((row, column)) == self.selected_cell;
-                let selected_on_left = column > 0 && Some((row, column - 1)) == self.selected_cell;
-                let selected_on_top = row > 0 && Some((row - 1, column)) == self.selected_cell;
+                let selected = self.is_cell_highlighted(&(row, column));
+                let selected_on_left = column > 0 && self.is_cell_highlighted(&(row, column - 1));
+                let selected_on_top = row > 0 && self.is_cell_highlighted(&(row - 1, column));
                 let selected_on_top_left =
-                    row > 0 && column > 0 && Some((row - 1, column - 1)) == self.selected_cell;
+                    row > 0 && column > 0 && self.is_cell_highlighted(&(row - 1, column - 1));
                 if row == 0 && column == 0 {
                     line1 += &self.theme.format_corner_top_left(selected);
                 } else if row == 0 && column != 0 {
@@ -268,8 +281,8 @@ impl Board {
                 }
             }
             // outer border of the last column
-            let selected = Some((row, self.size.1 - 1)) == self.selected_cell;
-            let selected_on_top = row > 0 && Some((row - 1, self.size.1 - 1)) == self.selected_cell;
+            let selected = self.is_cell_highlighted(&(row, &self.size.1 - 1));
+            let selected_on_top = row > 0 && self.is_cell_highlighted(&(row - 1, &self.size.1 - 1));
             if row == 0 {
                 line1 += &self.theme.format_corner_top_right(selected);
             } else {
@@ -283,8 +296,8 @@ impl Board {
             // content row
             let mut line2 = String::new();
             for column in 0..self.size.1 {
-                let selected = Some((row, column)) == self.selected_cell;
-                let selected_on_left = column > 0 && Some((row, column - 1)) == self.selected_cell;
+                let selected = self.is_cell_highlighted(&(row, column));
+                let selected_on_left = column > 0 && self.is_cell_highlighted(&(row, column - 1));
 
                 if (column == 0 && self.theme.outer_border_enabled)
                     || (column != 0 && self.theme.inner_border_column_enabled)
@@ -303,7 +316,7 @@ impl Board {
                 }
             }
             if self.theme.outer_border_enabled {
-                let sel = Some((row, self.size.1 - 1)) == self.selected_cell;
+                let sel = self.is_cell_highlighted(&(row, &self.size.1 - 1));
                 line2 += &self.theme.format_vertical_border(sel);
             }
             println!("{}\r", line2);
@@ -312,9 +325,9 @@ impl Board {
         // outer border of the last row
         let mut line3 = String::new();
         for column in 0..self.size.1 {
-            let selected = Some((self.size.0 - 1, column)) == self.selected_cell;
+            let selected = self.is_cell_highlighted(&(self.size.0 - 1, column));
             let selected_on_left =
-                column > 0 && Some((self.size.0 - 1, column - 1)) == self.selected_cell;
+                column > 0 && self.is_cell_highlighted(&(self.size.0 - 1, column - 1));
             if column == 0 {
                 line3 += &self.theme.format_corner_bottom_left(selected);
             } else {
@@ -327,7 +340,7 @@ impl Board {
                 line3 += &self.theme.format_horizontal_border(selected);
             }
         }
-        let selected = Some((self.size.0 - 1, self.size.1 - 1)) == self.selected_cell;
+        let selected = self.is_cell_highlighted(&(self.size.0 - 1, self.size.1 - 1));
         line3 += &self.theme.format_corner_bottom_right(selected);
         if self.theme.outer_border_enabled {
             println!("{}\r", line3);
@@ -335,25 +348,48 @@ impl Board {
 
         println!("remaining flags: {}\r", self.remaining_flags);
 
-        let mut bombs_without_flag = 0;
-        let mut non_bomb_cells_undicovered = 0;
+        if !self.game_ended {
+            // let mut bombs_without_flag = 0;
+            let mut non_bomb_cells_undicovered = 0;
 
-        for row in 0..self.size.0 {
-            for column in 0..self.size.1 {
-                if self.cells[row][column].is_bomb && self.cells[row][column].is_discovered {
-                    return Err(Error::new(ErrorKind::BrokenPipe, "Boom!!"));
-                }
-                if self.cells[row][column].is_bomb && !self.cells[row][column].is_flagged {
-                    bombs_without_flag += 1;
-                }
-                if !self.cells[row][column].is_bomb && !self.cells[row][column].is_discovered {
-                    non_bomb_cells_undicovered += 1;
+            for row in 0..self.size.0 {
+                for column in 0..self.size.1 {
+                    if self.cells[row][column].is_bomb && self.cells[row][column].is_discovered {
+                        return Err(Error::new(ErrorKind::BrokenPipe, "Boom!!"));
+                    }
+                    if self.cells[row][column].is_bomb && !self.cells[row][column].is_flagged {
+                        // bombs_without_flag += 1;
+                    }
+                    if !self.cells[row][column].is_bomb && !self.cells[row][column].is_discovered {
+                        non_bomb_cells_undicovered += 1;
+                    }
                 }
             }
-        }
 
-        if bombs_without_flag == 0 || non_bomb_cells_undicovered == 0 {
-            return Err(Error::new(ErrorKind::BrokenPipe, "You Won :)"));
+            // if bombs_without_flag == 0 || non_bomb_cells_undicovered == 0 {
+            if non_bomb_cells_undicovered == 0 {
+                self.game_ended = true;
+                self.selected_cell = None;
+                self.need_to_draw = true; // starts the game end animation
+                self.delay_before_draw = Some(Duration::new(0, 100_000_000));
+            }
+        } else {
+            // last part of the game end animation
+            if self.game_end_animation_step > 0 && self.highlighted_cell.len() == 0 {
+                return Err(Error::new(ErrorKind::BrokenPipe, "You Won :)"));
+            }
+
+            // steps of the game end animation
+            self.highlighted_cell = Vec::new();
+            for row in 0..self.size.0 {
+                for column in 0..self.size.1 {
+                    if row + column == self.game_end_animation_step {
+                        self.highlighted_cell.push((row, column));
+                    }
+                }
+            }
+            self.game_end_animation_step += 1;
+            self.need_to_draw = true;
         }
 
         Ok(())
