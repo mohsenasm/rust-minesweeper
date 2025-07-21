@@ -34,8 +34,6 @@ pub struct Theme {
     pub line_color: Option<Color>,
 }
 
-
-
 pub fn get_theme(theme_name: &String) -> Option<Theme> {
     match theme_name.as_str() {
         "border" => Some(border_theme()),
@@ -151,12 +149,36 @@ const THEME_COLOR_LIST_1: [Color; 6] = [
 ];
 
 const THEME_COLOR_LIST_2: [Color; 6] = [
-    Color::Rgb { r: 105, g: 201, b: 250 },
-    Color::Rgb { r: 120, g: 218, b: 116 },
-    Color::Rgb { r: 238, g: 127, b: 110 },
-    Color::Rgb { r: 111, g: 191, b: 228 },
-    Color::Rgb { r: 235, g: 129, b: 114 },
-    Color::Rgb { r: 207, g: 152, b: 198 },
+    Color::Rgb {
+        r: 105,
+        g: 201,
+        b: 250,
+    },
+    Color::Rgb {
+        r: 120,
+        g: 218,
+        b: 116,
+    },
+    Color::Rgb {
+        r: 238,
+        g: 127,
+        b: 110,
+    },
+    Color::Rgb {
+        r: 111,
+        g: 191,
+        b: 228,
+    },
+    Color::Rgb {
+        r: 235,
+        g: 129,
+        b: 114,
+    },
+    Color::Rgb {
+        r: 207,
+        g: 152,
+        b: 198,
+    },
 ];
 
 impl Theme {
