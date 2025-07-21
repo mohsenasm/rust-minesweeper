@@ -31,7 +31,7 @@ Options:
   -b, --bomb-percentage <BOMB_PERCENTAGE>
           The bomb percentage [default: 0.2]
   -t, --theme <THEME>
-          The board theme (colored, border, dark_border, borderless, colored_borderless) [default: colored]
+          The board theme (border, dark_border, borderless) [default: dark_border]
   -h, --help
           Print help
   -V, --version
