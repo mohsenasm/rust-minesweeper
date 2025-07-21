@@ -123,7 +123,7 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
                 }
             }
 
-            return Err(e);
+            return Err(e); // TODO: fix: it's a message not an error
         }
     }
 
