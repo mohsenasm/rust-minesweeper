@@ -4,12 +4,13 @@ use crossterm::event::{
     MouseEventKind, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
 use crossterm::{
-    event::{read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute, queue,
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use std::io::{stdout, Result, Stdout};
 use std::thread;
+use std::time::Duration;
 
 mod board;
 use board::{init_random_game, Board};
@@ -113,9 +114,28 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
         }
 
         if let Err(e) = game_board.draw(&stdout) {
+            // read all before leave
+            loop {
+                if poll(Duration::from_millis(10))? {
+                    read()?;
+                } else {
+                    break;
+                }
+            }
+
             return Err(e);
         }
     }
+
+    // read all before leave
+    loop {
+        if poll(Duration::from_millis(10))? {
+            read()?;
+        } else {
+            break;
+        }
+    }
+
     Ok(())
 }
 
