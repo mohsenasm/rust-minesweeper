@@ -99,6 +99,7 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
                 KeyCode::Left => game_board.move_selection(0, -1),
                 KeyCode::Right => game_board.move_selection(0, 1),
                 KeyCode::Char('f') | KeyCode::Char('F') => game_board.flag_selected(),
+                KeyCode::Char('c') | KeyCode::Char('C') => game_board.change_theme_color(),
                 KeyCode::Enter | KeyCode::Char(' ') => game_board.open_selected(),
                 _ => {}
             }
@@ -137,8 +138,8 @@ struct Args {
     #[arg(short, long, default_value_t = 0.2)]
     bomb_percentage: f32,
 
-    /// The board theme (colored, border, dark_border, borderless, colored_borderless)
-    #[arg(short, long, default_value = "colored")]
+    /// The board theme (border, dark_border, borderless)
+    #[arg(short, long, default_value = "dark_border")]
     theme: String,
 }
 

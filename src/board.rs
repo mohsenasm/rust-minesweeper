@@ -8,7 +8,7 @@ use crossterm::{
 
 use rand::Rng;
 
-use crate::theme::{get_theme, rotate_theme_name, Theme};
+use crate::theme::{get_theme, rotate_theme_color, rotate_theme_name, Theme};
 
 #[derive(Clone)]
 pub struct Cell {
@@ -526,6 +526,11 @@ impl Board {
             self.theme = theme;
             self.need_to_draw = true;
         }
+    }
+
+    pub fn change_theme_color(&mut self) {
+        self.theme.number_colors = rotate_theme_color(&self.theme.number_colors);
+        self.need_to_draw = true;
     }
 }
 

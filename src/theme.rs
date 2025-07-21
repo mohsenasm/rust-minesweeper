@@ -27,19 +27,19 @@ pub struct Theme {
     pub empty: String,
     pub unknown: String,
 
-    pub colored_numbers: bool,
+    pub number_colors: Option<[Color; 6]>,
     pub colored_numbers_on_selection: bool,
     pub highlight_corner_on_selection: bool,
 
     pub line_color: Option<Color>,
 }
 
+
+
 pub fn get_theme(theme_name: &String) -> Option<Theme> {
     match theme_name.as_str() {
-        "colored" => Some(colored_theme()),
         "border" => Some(border_theme()),
         "dark_border" => Some(dark_border_theme()),
-        "colored_borderless" => Some(colored_borderless_theme()),
         "borderless" => Some(borderless_theme()),
         _ => None,
     }
@@ -47,11 +47,17 @@ pub fn get_theme(theme_name: &String) -> Option<Theme> {
 
 pub fn rotate_theme_name(theme_name: &String) -> String {
     match theme_name.as_str() {
-        "colored" => "border".to_owned(),
-        "border" => "dark_border".to_owned(),
         "dark_border" => "borderless".to_owned(),
-        "borderless" => "colored_borderless".to_owned(),
-        _ => "colored".to_owned(),
+        "borderless" => "border".to_owned(),
+        _ => "dark_border".to_owned(),
+    }
+}
+
+pub fn rotate_theme_color(theme_color: &Option<[Color; 6]>) -> Option<[Color; 6]> {
+    match theme_color {
+        Some(THEME_COLOR_LIST_1) => Some(THEME_COLOR_LIST_2),
+        Some(THEME_COLOR_LIST_2) => None,
+        _ => Some(THEME_COLOR_LIST_1),
     }
 }
 
@@ -81,7 +87,7 @@ pub fn border_theme() -> Theme {
         empty: ' '.to_string(),
         unknown: '█'.to_string(),
 
-        colored_numbers: false,
+        number_colors: Some(THEME_COLOR_LIST_1),
         colored_numbers_on_selection: true,
         highlight_corner_on_selection: false,
         line_color: None,
@@ -114,8 +120,8 @@ pub fn borderless_theme() -> Theme {
         empty: ' '.to_string(),
         unknown: '-'.to_string(),
 
-        colored_numbers: false,
-        colored_numbers_on_selection: true,
+        number_colors: Some(THEME_COLOR_LIST_1),
+        colored_numbers_on_selection: false,
         highlight_corner_on_selection: false,
         line_color: None,
     }
@@ -135,22 +141,23 @@ pub fn dark_border_theme() -> Theme {
     t
 }
 
-pub fn colored_theme() -> Theme {
-    let mut t = dark_border_theme();
-    t.name = "colored".to_owned();
-    t.colored_numbers = true;
+const THEME_COLOR_LIST_1: [Color; 6] = [
+    Color::Blue,
+    Color::Green,
+    Color::Red,
+    Color::DarkBlue,
+    Color::DarkRed,
+    Color::DarkMagenta,
+];
 
-    t
-}
-
-pub fn colored_borderless_theme() -> Theme {
-    let mut t = borderless_theme();
-    t.name = "colored_borderless".to_owned();
-    t.colored_numbers = true;
-    t.colored_numbers_on_selection = false;
-
-    t
-}
+const THEME_COLOR_LIST_2: [Color; 6] = [
+    Color::Rgb { r: 105, g: 201, b: 250 },
+    Color::Rgb { r: 120, g: 218, b: 116 },
+    Color::Rgb { r: 238, g: 127, b: 110 },
+    Color::Rgb { r: 111, g: 191, b: 228 },
+    Color::Rgb { r: 235, g: 129, b: 114 },
+    Color::Rgb { r: 207, g: 152, b: 198 },
+];
 
 impl Theme {
     pub fn format_number_of_adjusted_bombs(
@@ -158,18 +165,20 @@ impl Theme {
         number_of_adjusted_bombs: u8,
         selected: bool,
     ) -> String {
-        let use_color = self.colored_numbers && (!selected || self.colored_numbers_on_selection);
+        let use_color =
+            (self.number_colors != None) && (!selected || self.colored_numbers_on_selection);
 
         if use_color {
+            let number_colors = self.number_colors.unwrap();
             format!(
                 "{}{}{}",
                 (match number_of_adjusted_bombs {
-                    1 => SetForegroundColor(Color::Blue).to_string(),
-                    2 => SetForegroundColor(Color::Green).to_string(),
-                    3 => SetForegroundColor(Color::Red).to_string(),
-                    4 => SetForegroundColor(Color::DarkBlue).to_string(),
-                    5 => SetForegroundColor(Color::DarkRed).to_string(),
-                    _ => SetForegroundColor(Color::DarkMagenta).to_string(),
+                    1 => SetForegroundColor(number_colors[0]).to_string(),
+                    2 => SetForegroundColor(number_colors[1]).to_string(),
+                    3 => SetForegroundColor(number_colors[2]).to_string(),
+                    4 => SetForegroundColor(number_colors[3]).to_string(),
+                    5 => SetForegroundColor(number_colors[4]).to_string(),
+                    _ => SetForegroundColor(number_colors[5]).to_string(),
                 }),
                 number_of_adjusted_bombs.to_string(),
                 ResetColor.to_string()
