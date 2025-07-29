@@ -1,4 +1,5 @@
-use std::io::{Error, ErrorKind, Result, Stdout};
+use std::cmp::PartialEq;
+use std::io::{Result, Stdout};
 use std::time::Duration;
 
 use crossterm::{
@@ -61,9 +62,18 @@ pub struct Board {
     selected_cell: Option<(usize, usize)>,
     need_to_draw: bool,
     pub delay_before_draw: Option<Duration>,
-    pub game_ended: bool,
+    pub game_completion_status: GameCompletionStatus,
     game_end_animation_step: usize,
     highlighted_cell: Vec<(usize, usize)>,
+}
+
+#[derive(PartialEq)]
+pub enum GameCompletionStatus {
+    GameIsOnGoing,
+    WinAnimation,
+    LostAnimation(usize, usize),
+    CompletedAsWin,
+    CompletedAsLost,
 }
 
 pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme) -> Board {
@@ -76,7 +86,7 @@ pub fn init_random_game(size: (usize, usize), bomb_percentage: f32, theme: Theme
         selected_cell: None,
         need_to_draw: true,
         delay_before_draw: None,
-        game_ended: false,
+        game_completion_status: GameCompletionStatus::GameIsOnGoing,
         game_end_animation_step: 0,
         highlighted_cell: Vec::new(),
     };
@@ -348,51 +358,99 @@ impl Board {
 
         println!("remaining flags: {}\r", self.remaining_flags);
 
-        if !self.game_ended {
-            // let mut bombs_without_flag = 0;
-            let mut non_bomb_cells_undicovered = 0;
-
-            for row in 0..self.size.0 {
-                for column in 0..self.size.1 {
-                    if self.cells[row][column].is_bomb && self.cells[row][column].is_discovered {
-                        return Err(Error::new(ErrorKind::BrokenPipe, "Boom!!"));
-                    }
-                    if self.cells[row][column].is_bomb && !self.cells[row][column].is_flagged {
-                        // bombs_without_flag += 1;
-                    }
-                    if !self.cells[row][column].is_bomb && !self.cells[row][column].is_discovered {
-                        non_bomb_cells_undicovered += 1;
-                    }
-                }
-            }
-
-            // if bombs_without_flag == 0 || non_bomb_cells_undicovered == 0 {
-            if non_bomb_cells_undicovered == 0 {
-                self.game_ended = true;
-                self.selected_cell = None;
-                self.need_to_draw = true; // starts the game end animation
-                self.delay_before_draw = Some(Duration::new(0, 100_000_000));
-            }
-        } else {
-            // last part of the game end animation
-            if self.game_end_animation_step > 0 && self.highlighted_cell.len() == 0 {
-                return Err(Error::new(ErrorKind::BrokenPipe, "You Won :)"));
-            }
-
-            // steps of the game end animation
-            self.highlighted_cell = Vec::new();
-            for row in 0..self.size.0 {
-                for column in 0..self.size.1 {
-                    if row + column == self.game_end_animation_step {
-                        self.highlighted_cell.push((row, column));
-                    }
-                }
-            }
-            self.game_end_animation_step += 1;
-            self.need_to_draw = true;
-        }
-
         Ok(())
+    }
+
+    pub fn update(&mut self) {
+        match self.game_completion_status {
+            GameCompletionStatus::GameIsOnGoing => {
+                // let mut bombs_without_flag = 0;
+                let mut non_bomb_cells_undicovered = 0;
+
+                for row in 0..self.size.0 {
+                    for column in 0..self.size.1 {
+                        if self.cells[row][column].is_bomb && self.cells[row][column].is_discovered
+                        {
+                            self.game_completion_status =
+                                GameCompletionStatus::LostAnimation(row, column);
+                            self.selected_cell = None;
+                            self.need_to_draw = true; // starts the game end animation
+                            self.delay_before_draw = Some(Duration::new(0, 200_000_000));
+                            return;
+                        }
+                        if self.cells[row][column].is_bomb && !self.cells[row][column].is_flagged {
+                            // bombs_without_flag += 1;
+                        }
+                        if !self.cells[row][column].is_bomb
+                            && !self.cells[row][column].is_discovered
+                        {
+                            non_bomb_cells_undicovered += 1;
+                        }
+                    }
+                }
+
+                // if bombs_without_flag == 0 || non_bomb_cells_undicovered == 0 {
+                if non_bomb_cells_undicovered == 0 {
+                    self.game_completion_status = GameCompletionStatus::WinAnimation;
+                    self.selected_cell = None;
+                    self.need_to_draw = true; // starts the game end animation
+                    self.delay_before_draw = Some(Duration::new(0, 100_000_000));
+                }
+            }
+            GameCompletionStatus::WinAnimation => {
+                // last part of the animation
+                if self.game_end_animation_step > 0 && self.highlighted_cell.len() == 0 {
+                    self.game_completion_status = GameCompletionStatus::CompletedAsWin;
+                    return;
+                }
+
+                // steps of the animation
+                self.highlighted_cell = Vec::new();
+                for row in 0..self.size.0 {
+                    for column in 0..self.size.1 {
+                        if row + column == self.game_end_animation_step {
+                            self.highlighted_cell.push((row, column));
+                        }
+                    }
+                }
+                self.game_end_animation_step += 1;
+                self.need_to_draw = true;
+            }
+            GameCompletionStatus::LostAnimation(bomb_row, bomb_column) => {
+                // last part of the animation
+                if self.game_end_animation_step > 0 && self.highlighted_cell.len() <= 1 {
+                    self.game_completion_status = GameCompletionStatus::CompletedAsLost;
+                    return;
+                }
+
+                // steps of the animation
+                self.highlighted_cell = Vec::new();
+                self.highlighted_cell.push((bomb_row, bomb_column));
+                for _row in 0..self.size.0 {
+                    for _column in 0..self.size.1 {
+                        if (bomb_row.abs_diff(_row) == self.game_end_animation_step)
+                            && (
+                                bomb_column.abs_diff(_column) <= self.game_end_animation_step
+                            )
+                        {
+                            self.highlighted_cell.push((_row, _column));
+                        }
+
+                        if (bomb_column.abs_diff(_column) == self.game_end_animation_step)
+                            && (
+                                bomb_row.abs_diff(_row) <= self.game_end_animation_step
+                            )
+                        {
+                            self.highlighted_cell.push((_row, _column));
+                        }
+                    }
+                }
+                self.game_end_animation_step += 1;
+                self.need_to_draw = true;
+            }
+            GameCompletionStatus::CompletedAsWin => return,
+            GameCompletionStatus::CompletedAsLost => return,
+        }
     }
 
     // it is O(n), TODO: can be O(1) but may make themes complicated.

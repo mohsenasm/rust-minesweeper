@@ -1,10 +1,9 @@
 use clap::Parser;
 use crossterm::event::{
-    KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, KeyboardEnhancementFlags, MouseButton,
-    MouseEventKind, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
+    KeyboardEnhancementFlags, PopKeyboardEnhancementFlags, PushKeyboardEnhancementFlags,
 };
 use crossterm::{
-    event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{poll, read, DisableMouseCapture, EnableMouseCapture},
     execute, queue,
     terminal::{disable_raw_mode, enable_raw_mode},
 };
@@ -18,115 +17,34 @@ use board::{init_random_game, Board};
 mod theme;
 use theme::get_theme;
 
-const CTRL_C_KEY: KeyEvent = KeyEvent {
-    code: KeyCode::Char('c'),
-    modifiers: KeyModifiers::CONTROL,
-    kind: KeyEventKind::Press,
-    state: KeyEventState::NONE,
-};
-const Q_KEY: KeyEvent = KeyEvent {
-    code: KeyCode::Char('q'),
-    modifiers: KeyModifiers::NONE,
-    kind: KeyEventKind::Press,
-    state: KeyEventState::NONE,
-};
-const ESC_KEY: KeyEvent = KeyEvent {
-    code: KeyCode::Esc,
-    modifiers: KeyModifiers::NONE,
-    kind: KeyEventKind::Press,
-    state: KeyEventState::NONE,
-};
-const TAB_KEY: KeyEvent = KeyEvent {
-    code: KeyCode::Tab,
-    modifiers: KeyModifiers::NONE,
-    kind: KeyEventKind::Press,
-    state: KeyEventState::NONE,
-};
-const T_KEY: KeyEvent = KeyEvent {
-    code: KeyCode::Char('t'),
-    modifiers: KeyModifiers::NONE,
-    kind: KeyEventKind::Press,
-    state: KeyEventState::NONE,
-};
-const H_KEY: KeyEvent = KeyEvent {
-    code: KeyCode::Char('h'),
-    modifiers: KeyModifiers::NONE,
-    kind: KeyEventKind::Press,
-    state: KeyEventState::NONE,
-};
+mod input;
+use input::process_input;
+
+use crate::board::GameCompletionStatus;
 
 fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
     // first draw
-    if let Err(e) = game_board.draw(&stdout) {
-        return Err(e);
-    }
+    game_board.draw(&stdout)?;
+    game_board.update();
 
     loop {
-        if !game_board.game_ended {
-            let event = read()?;
-
-            if let Event::Mouse(mouse_event) = event {
-                let row = mouse_event.row as usize; // TODO: usize::try_from(mouse_event.row);
-                let column = mouse_event.column as usize; // TODO: usize::try_from(mouse_event.column);
-
-                if mouse_event.kind == MouseEventKind::Moved {
-                    game_board.mouse_hover(row, column);
-                }
-                if mouse_event.kind == MouseEventKind::Down(MouseButton::Left) {
-                    game_board.mouse_down(row, column, true);
-                } else if mouse_event.kind == MouseEventKind::Down(MouseButton::Right)
-                    || mouse_event.kind == MouseEventKind::Down(MouseButton::Middle)
-                {
-                    game_board.mouse_down(row, column, false);
-                }
-            }
-
-            if let Event::Key(key_event) = event {
-                // exit on CTRL_C, ESC, or Q
-                if key_event == CTRL_C_KEY || key_event == ESC_KEY || key_event == Q_KEY {
-                    break;
-                }
-                // change theme on TAB or T
-                if key_event == TAB_KEY || key_event == T_KEY {
-                    game_board.change_theme();
-                }
-                // discover a non-bomb on H
-                if key_event == H_KEY {
-                    game_board.hint();
-                }
-
-                // Keyboard navigation
-                match key_event.code {
-                    KeyCode::Up => game_board.move_selection(-1, 0),
-                    KeyCode::Down => game_board.move_selection(1, 0),
-                    KeyCode::Left => game_board.move_selection(0, -1),
-                    KeyCode::Right => game_board.move_selection(0, 1),
-                    KeyCode::Char('f') | KeyCode::Char('F') => game_board.flag_selected(),
-                    KeyCode::Char('c') | KeyCode::Char('C') => game_board.change_theme_color(),
-                    KeyCode::Enter | KeyCode::Char(' ') => game_board.open_selected(),
-                    _ => {}
-                }
-            }
+        if game_board.game_completion_status == GameCompletionStatus::GameIsOnGoing {
+            process_input(&mut game_board)?;
         }
 
         if let Some(time) = game_board.delay_before_draw {
             thread::sleep(time);
         }
 
-        if let Err(e) = game_board.draw(&stdout) {
-            // read all before leave
-            loop {
-                if poll(Duration::from_millis(10))? {
-                    read()?;
-                } else {
-                    break;
-                }
-            }
+        game_board.draw(&stdout)?;
+        game_board.update();
 
-            return Err(e); // TODO: fix: it's a message not an error
+        if game_board.game_completion_status == GameCompletionStatus::CompletedAsLost
+            || game_board.game_completion_status == GameCompletionStatus::CompletedAsWin
+        {
+            break;
         }
     }
-
     // read all before leave
     loop {
         if poll(Duration::from_millis(10))? {
@@ -134,6 +52,11 @@ fn event_loop(mut game_board: Board, stdout: &Stdout) -> Result<()> {
         } else {
             break;
         }
+    }
+    if game_board.game_completion_status == GameCompletionStatus::CompletedAsLost {
+        println!("Boom! You Lost :(\r");
+    } else if game_board.game_completion_status == GameCompletionStatus::CompletedAsWin {
+        println!("You Won :)\r");
     }
 
     Ok(())
